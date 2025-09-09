@@ -1,0 +1,277 @@
+<div class="moderation-container">
+  <!-- Enhanced Header Section -->
+  <div class="header-section">
+    <div class="header-content">
+      <h1 class="page-title">Content Moderation</h1>
+      <p class="page-subtitle">Manage user reports, content flags, and moderation actions</p>
+    </div>
+    <div class="header-actions">
+      <button mat-raised-button color="primary" class="export-btn">
+        <mat-icon>download</mat-icon>
+        Export Report
+      </button>
+    </div>
+  </div>
+
+  <!-- Enhanced Stats Cards -->
+  <div class="stats-section" *ngIf="stats">
+    <mat-card class="stat-card pending-reports">
+      <mat-card-content>
+        <div class="stat-content">
+          <div class="stat-icon pending">
+            <mat-icon>report_problem</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3 class="stat-number">{{ stats.pending_reports }}</h3>
+            <p class="stat-label">Pending Reports</p>
+            <span class="stat-trend">+12% from last week</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- <mat-card class="stat-card pending-flags">
+      <mat-card-content>
+        <div class="stat-content">
+          <div class="stat-icon warning">
+            <mat-icon>flag</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3 class="stat-number">{{ stats.pending_flags }}</h3>
+            <p class="stat-label">Pending Flags</p>
+            <span class="stat-trend">-5% from last week</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card> -->
+
+    <mat-card class="stat-card resolved-today">
+      <mat-card-content>
+        <div class="stat-content">
+          <div class="stat-icon success">
+            <mat-icon>check_circle</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3 class="stat-number">{{ stats.resolved_today }}</h3>
+            <p class="stat-label">Resolved Today</p>
+            <span class="stat-trend positive">+8% from yesterday</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card total-actions">
+      <mat-card-content>
+        <div class="stat-content">
+          <div class="stat-icon info">
+            <mat-icon>gavel</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3 class="stat-number">{{ stats.total_actions }}</h3>
+            <p class="stat-label">Total Actions</p>
+            <span class="stat-trend">This month</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Enhanced Filters Section -->
+  <mat-card class="filters-section">
+    <mat-card-header>
+      <mat-card-title class="filters-title">
+        <mat-icon>filter_list</mat-icon>
+        Filters & Search
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="filtersForm" class="filters-form">
+        <div class="filter-row">
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Status</mat-label>
+            <mat-select formControlName="status">
+              <mat-option value="">All Statuses</mat-option>
+              <mat-option value="pending">Pending</mat-option>
+              <mat-option value="reviewed">Reviewed</mat-option>
+              <mat-option value="resolved">Resolved</mat-option>
+              <mat-option value="dismissed">Dismissed</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field search-field">
+            <mat-label>Search</mat-label>
+            <input matInput formControlName="search" placeholder="Search descriptions, users...">
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>From Date</mat-label>
+            <input matInput [matDatepicker]="fromPicker" formControlName="date_from">
+            <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
+            <mat-datepicker #fromPicker></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>To Date</mat-label>
+            <input matInput [matDatepicker]="toPicker" formControlName="date_to">
+            <mat-datepicker-toggle matSuffix [for]="toPicker"></mat-datepicker-toggle>
+            <mat-datepicker #toPicker></mat-datepicker>
+          </mat-form-field>
+        </div>
+
+        <div class="filter-actions">
+          <button mat-raised-button color="primary" (click)="applyFilters()" class="apply-btn">
+            <mat-icon>search</mat-icon>
+            Apply Filters
+          </button>
+          <button mat-stroked-button (click)="clearFilters()" class="clear-btn">
+            <mat-icon>clear</mat-icon>
+            Clear All
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Enhanced Tabs Section -->
+  <mat-card class="content-section">
+    <mat-tab-group class="moderation-tabs" animationDuration="300ms">
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">report</mat-icon>
+          User Reports
+          <!-- <mat-chip class="tab-badge" *ngIf="stats?.pending_reports">{{ stats.pending_reports }}</mat-chip> -->
+        </ng-template>
+        
+        <div class="tab-content">
+          <div class="table-header">
+            <h3 class="table-title">User Reports Management</h3>
+            <div class="table-actions">
+              <button mat-icon-button matTooltip="Refresh">
+                <mat-icon>refresh</mat-icon>
+              </button>
+              <button mat-icon-button matTooltip="Export">
+                <mat-icon>download</mat-icon>
+              </button>
+            </div>
+          </div>
+          
+          <div class="table-container">
+            <table mat-table [dataSource]="reports" class="professional-table">
+              <ng-container matColumnDef="id">
+                <th mat-header-cell *matHeaderCellDef class="header-cell">Report ID</th>
+                <td mat-cell *matCellDef="let report" class="data-cell">
+                  <div class="report-id">
+                    <span class="id-badge">{{ report.id?.toString().substring(0, 8) || 'N/A' }}</span>
+                  </div>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="reporter">
+                <th mat-header-cell *matHeaderCellDef class="header-cell">Reporter</th>
+                <td mat-cell *matCellDef="let report" class="data-cell">
+                  <div class="user-info">
+                    <div class="user-avatar">
+                      <img *ngIf="report.reporter?.avatar_url; else defaultAvatar" 
+                           [src]="report.reporter.avatar_url" 
+                           [alt]="report.reporter.full_name"
+                           class="avatar-img">
+                      <ng-template #defaultAvatar>
+                        <mat-icon>account_circle</mat-icon>
+                      </ng-template>
+                    </div>
+                    <div class="user-details">
+                      <span class="user-name">{{ report.reporter?.full_name || report.reporter?.display_name || 'Unknown User' }}</span>
+                      <span class="user-email">{{ report.reporter?.email || 'No email' }}</span>
+                    </div>
+                  </div>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="reported_user">
+                <th mat-header-cell *matHeaderCellDef class="header-cell">Reported User</th>
+                <td mat-cell *matCellDef="let report" class="data-cell">
+                  <div class="user-info">
+                    <div class="user-avatar">
+                      <img *ngIf="report.reported_user?.avatar_url; else defaultAvatar" 
+                           [src]="report.reported_user.avatar_url" 
+                           [alt]="report.reported_user.full_name"
+                           class="avatar-img">
+                      <ng-template #defaultAvatar>
+                        <mat-icon>account_circle</mat-icon>
+                      </ng-template>
+                    </div>
+                    <div class="user-details">
+                      <span class="user-name">{{ report.reported_user?.full_name || 'Unknown User' }}</span>
+                      <span class="user-email">{{ report.reported_user?.email || 'No email' }}</span>
+                      <span class="user-status" [ngClass]="'status-' + (report.reported_user?.status || 'unknown')">{{ report.reported_user?.status || 'Unknown' }}</span>
+                    </div>
+                  </div>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="reason">
+                <th mat-header-cell *matHeaderCellDef class="header-cell">Reason</th>
+                <td mat-cell *matCellDef="let report" class="data-cell">
+                  <mat-chip class="reason-chip">{{ report.reason | titlecase }}</mat-chip>
+                  <div *ngIf="report.details" class="reason-details">{{ report.details }}</div>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef class="header-cell">Status</th>
+                <td mat-cell *matCellDef="let report" class="data-cell">
+                  <mat-chip class="status-chip" [ngClass]="'status-' + report.status">
+                    <mat-icon class="status-icon">{{ getStatusIcon(report.status) }}</mat-icon>
+                    {{ report.status | titlecase }}
+                  </mat-chip>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="created_at">
+                <th mat-header-cell *matHeaderCellDef class="header-cell">Created</th>
+                <td mat-cell *matCellDef="let report" class="data-cell">
+                  <div class="date-info">
+                    <span class="date-primary">{{ report.created_at | date:'MMM d, y' }}</span>
+                    <span class="date-secondary">{{ report.created_at | date:'h:mm a' }}</span>
+                  </div>
+                  <div *ngIf="report.updated_at && report.updated_at !== report.created_at" class="date-updated">
+                    Updated: {{ report.updated_at | date:'MMM d, y h:mm a' }}
+                  </div>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef class="header-cell actions-header">Actions</th>
+                <td mat-cell *matCellDef="let report" class="data-cell actions-cell">
+                  <button mat-icon-button [matMenuTriggerFor]="reportMenu" class="action-trigger">
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                  <mat-menu #reportMenu="matMenu" class="professional-menu">
+                    <button mat-menu-item (click)="updateReportStatus(report.id, 'reviewed')" class="menu-item reviewed">
+                      <mat-icon>visibility</mat-icon>
+                      <span>Mark as Reviewed</span>
+                    </button>
+                    <button mat-menu-item (click)="updateReportStatus(report.id, 'resolved')" class="menu-item resolved">
+                      <mat-icon>check_circle</mat-icon>
+                      <span>Resolve</span>
+                    </button>
+                    <mat-divider></mat-divider>
+                    <button mat-menu-item (click)="updateReportStatus(report.id, 'dismissed')" class="menu-item dismissed">
+                      <mat-icon>close</mat-icon>
+                      <span>Dismiss</span>
+                    </button>
+                  </mat-menu>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="reportColumns" class="header-row"></tr>
+              <tr mat-row *matRowDef="let row; columns: reportColumns;" class="data-row"></tr>
+            </table>
+          </div>
+        </div>
+      </mat-tab>
+
+    </mat-tab-group>
+  </mat-card>
+</div>

@@ -1,0 +1,227 @@
+<div class="analytics-container">
+  <!-- Header -->
+  <div class="analytics-header">
+    <h1>Analytics & Reporting</h1>
+    <div class="header-actions">
+      <button mat-raised-button color="primary" (click)="refreshData()">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+      <button mat-stroked-button [matMenuTriggerFor]="exportMenu">
+        <mat-icon>download</mat-icon>
+        Export
+      </button>
+      <mat-menu #exportMenu="matMenu">
+        <button mat-menu-item (click)="exportData('pdf')">
+          <mat-icon>picture_as_pdf</mat-icon>
+          Export as PDF
+        </button>
+        <button mat-menu-item (click)="exportData('excel')">
+          <mat-icon>table_chart</mat-icon>
+          Export as Excel
+        </button>
+        <button mat-menu-item (click)="exportData('csv')">
+          <mat-icon>description</mat-icon>
+          Export as CSV
+        </button>
+      </mat-menu>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <mat-card class="filters-card">
+    <form [formGroup]="filterForm" class="filters-form">
+      <mat-form-field>
+        <mat-label>Date Range</mat-label>
+        <mat-select formControlName="date_range">
+          <mat-option value="today">Today</mat-option>
+          <mat-option value="week">This Week</mat-option>
+          <mat-option value="month">This Month</mat-option>
+          <mat-option value="quarter">This Quarter</mat-option>
+          <mat-option value="year">This Year</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field>
+        <mat-label>Metric Type</mat-label>
+        <mat-select formControlName="metric_type">
+          <mat-option value="overview">Overview</mat-option>
+          <mat-option value="users">Users</mat-option>
+          <mat-option value="revenue">Revenue</mat-option>
+          <mat-option value="content">Content</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </form>
+  </mat-card>
+
+  <!-- Loading Spinner -->
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner></mat-spinner>
+  </div>
+
+  <!-- Analytics Content -->
+  <div *ngIf="!loading" class="analytics-content">
+    <!-- Overview Cards -->
+    <div class="overview-cards" *ngIf="overview">
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon>people</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3>{{ overview.total_users | number }}</h3>
+            <p>Total Users</p>
+            <span class="growth-rate positive">+{{ overview.growth_rate }}%</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon>trending_up</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3>{{ overview.active_users | number }}</h3>
+            <p>Active Users</p>
+            <span class="growth-rate positive">+8.2%</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon>attach_money</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3>${{ overview.total_revenue | number:'1.2-2' }}</h3>
+            <p>Total Revenue</p>
+            <span class="growth-rate positive">+15.3%</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon>subscriptions</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3>{{ overview.total_subscriptions | number }}</h3>
+            <p>Subscriptions</p>
+            <span class="growth-rate negative">-{{ overview.churn_rate }}%</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Charts Section -->
+    <mat-tab-group class="charts-tabs">
+      <mat-tab label="User Analytics">
+        <div class="tab-content">
+          <div class="chart-container">
+            <canvas id="userGrowthChart"></canvas>
+          </div>
+          <div class="user-stats" *ngIf="userAnalytics">
+            <mat-card>
+              <mat-card-header>
+                <mat-card-title>User Statistics</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="stats-grid">
+                  <div class="stat-item">
+                    <span class="label">New Users Today:</span>
+                    <span class="value">{{ userAnalytics.new_users_today }}</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="label">New Users This Week:</span>
+                    <span class="value">{{ userAnalytics.new_users_this_week }}</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="label">New Users This Month:</span>
+                    <span class="value">{{ userAnalytics.new_users_this_month }}</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="label">Retention Rate:</span>
+                    <span class="value">{{ userAnalytics.user_retention_rate }}%</span>
+                  </div>
+                </div>
+              </mat-card-content>
+            </mat-card>
+          </div>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Revenue Analytics">
+        <div class="tab-content">
+          <div class="chart-container">
+            <canvas id="revenueChart"></canvas>
+          </div>
+          <div class="revenue-stats" *ngIf="revenueAnalytics">
+            <mat-card>
+              <mat-card-header>
+                <mat-card-title>Revenue Breakdown</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="stats-grid">
+                  <div class="stat-item">
+                    <span class="label">Daily Revenue:</span>
+                    <span class="value">${{ revenueAnalytics.daily_revenue | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="label">Weekly Revenue:</span>
+                    <span class="value">${{ revenueAnalytics.weekly_revenue | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="label">Monthly Revenue:</span>
+                    <span class="value">${{ revenueAnalytics.monthly_revenue | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="label">Growth Rate:</span>
+                    <span class="value">{{ revenueAnalytics.revenue_growth_rate }}%</span>
+                  </div>
+                </div>
+              </mat-card-content>
+            </mat-card>
+          </div>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Content Analytics">
+        <div class="tab-content">
+          <div class="chart-container">
+            <canvas id="contentChart"></canvas>
+          </div>
+          <div class="content-stats" *ngIf="contentAnalytics">
+            <mat-card>
+              <mat-card-header>
+                <mat-card-title>Content Statistics</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="stats-grid">
+                  <div class="stat-item">
+                    <span class="label">Total Meetups:</span>
+                    <span class="value">{{ contentAnalytics.total_meetups }}</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="label">Total Events:</span>
+                    <span class="value">{{ contentAnalytics.total_events }}</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="label">Total Chats:</span>
+                    <span class="value">{{ contentAnalytics.total_chats }}</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="label">Engagement Rate:</span>
+                    <span class="value">{{ contentAnalytics.content_engagement_rate }}%</span>
+                  </div>
+                </div>
+              </mat-card-content>
+            </mat-card>
+          </div>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </div>
+</div>

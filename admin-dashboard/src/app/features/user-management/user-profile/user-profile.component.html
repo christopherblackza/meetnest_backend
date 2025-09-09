@@ -1,0 +1,103 @@
+ <div class="user-profile-container" *ngIf="user">
+      <div class="profile-header">
+        <button mat-icon-button (click)="goBack()" class="back-button">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+        <h1>User Profile</h1>
+      </div>
+      
+      <div class="profile-content">
+        <mat-card class="profile-card">
+          <mat-card-content>
+            <div class="profile-info">
+              <div class="avatar-section">
+                <img [src]="user.avatar_url || '/assets/default-avatar.png'" 
+                     [alt]="user.full_name" class="profile-avatar">
+              </div>
+              
+              <div class="basic-info">
+                <h2>{{ user.full_name }}</h2>
+                <p class="email">{{ user.email }}</p>
+                <p class="user-id">ID: {{ user.user_id }}</p>
+                
+                <div class="status-chips">
+                  <mat-chip [class]="'status-chip ' + user.verification_status">
+                    {{ user.verification_status | titlecase }}
+                  </mat-chip>
+                  <mat-chip [class]="'status-chip ' + user.status">
+                    {{ user.status | titlecase }}
+                  </mat-chip>
+                </div>
+                
+                <div class="trust-score-section">
+                  <span class="trust-label">Trust Score:</span>
+                  <div class="trust-score" [class]="getTrustScoreClass(user.trust_score)">
+                    {{ user.trust_score }}/100
+                  </div>
+                </div>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+        
+        <mat-tab-group class="profile-tabs">
+          <mat-tab label="Details">
+            <div class="tab-content">
+              <mat-card>
+                <mat-card-header>
+                  <mat-card-title>Account Information</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <div class="info-grid">
+                    <div class="info-item">
+                      <span class="label">Location:</span>
+                      <span class="value">
+                        <!-- {{ user.city }}{{ user.city && user.country ? ', ' : '' }}{{ user.country }} -->
+                        <!-- <span *ngIf="!user.city && !user.country" class="no-data">Not specified</span> -->
+                      </span>
+                    </div>
+                    <div class="info-item">
+                      <span class="label">Joined:</span>
+                      <span class="value">{{ user.created_at | date:'full' }}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="label">Last Login:</span>
+                      <span class="value">
+                        <!-- {{ user.last_login | date:'medium' }} -->
+                        <!-- <span *ngIf="!user.last_login" class="no-data">Never</span> -->
+                      </span>
+                    </div>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+            </div>
+          </mat-tab>
+          
+          <mat-tab label="Activity">
+            <div class="tab-content">
+              <mat-card>
+                <mat-card-header>
+                  <mat-card-title>Recent Activity</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <p class="coming-soon">Activity tracking coming soon...</p>
+                </mat-card-content>
+              </mat-card>
+            </div>
+          </mat-tab>
+          
+          <mat-tab label="Reports">
+            <div class="tab-content">
+              <mat-card>
+                <mat-card-header>
+                  <mat-card-title>Reports & Moderation</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <p class="coming-soon">Reports history coming soon...</p>
+                </mat-card-content>
+              </mat-card>
+            </div>
+          </mat-tab>
+        </mat-tab-group>
+      </div>
+    </div>
