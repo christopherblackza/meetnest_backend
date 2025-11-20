@@ -1,108 +1,165 @@
-<div class="user-management-container">
-      <!-- Stats Cards -->
-      <div class="stats-grid" *ngIf="stats$ | async as stats">
-        <mat-card class="stat-card">
-          <mat-card-content>
-            <div class="stat-number">{{stats.total_users | number}}</div>
-            <div class="stat-label">Total Users</div>
-          </mat-card-content>
-        </mat-card>
-        
-        <mat-card class="stat-card">
-          <mat-card-content>
-            <div class="stat-number">{{stats.verified_users | number}}</div>
-            <div class="stat-label">Verified Users</div>
-          </mat-card-content>
-        </mat-card>
-        
-        <mat-card class="stat-card">
-          <mat-card-content>
-            <div class="stat-number">{{stats.pending_verifications | number}}</div>
-            <div class="stat-label">Pending Verifications</div>
-          </mat-card-content>
-        </mat-card>
-        
-        <mat-card class="stat-card">
-          <mat-card-content>
-            <div class="stat-number">{{stats.reports_pending | number}}</div>
-            <div class="stat-label">Pending Reports</div>
-          </mat-card-content>
-        </mat-card>
-      </div>
-
-      <!-- Actions Bar -->
-      <div class="actions-bar">
-        <h2>User Management</h2>
-        <div class="actions">
+ <div class="user-management-container">
+      <!-- Header -->
+      <div class="header">
+        <h1>User Management</h1>
+        <div class="header-actions">
           <button mat-raised-button color="primary" (click)="exportUsers()">
             <mat-icon>download</mat-icon>
-            Export Users
+            Export CSV
+          </button>
+          <button mat-raised-button color="accent" (click)="bulkAction('verify')" [disabled]="selectedUsers().length === 0">
+            <mat-icon>verified</mat-icon>
+            Bulk Verify ({{selectedUsers().length}})
+          </button>
+          <button mat-raised-button color="warn" (click)="bulkAction('suspend')" [disabled]="selectedUsers().length === 0">
+            <mat-icon>block</mat-icon>
+            Bulk Suspend ({{selectedUsers().length}})
           </button>
         </div>
       </div>
 
-      <!-- Users Table -->
-      <mat-card>
+      <!-- KPI Cards -->
+      <div class="stats-grid">
+        <mat-card *ngFor="let card of kpiCards()" class="stat-card" [ngClass]="card.color">
+          <mat-card-content>
+            <div class="stat-content">
+              <div class="stat-info">
+                <h3>{{card.title}}</h3>
+                <div class="stat-value">{{card.value | number}}</div>
+                <div class="stat-change" [ngClass]="{'positive': card.change > 0, 'negative': card.change < 0}">
+                  <mat-icon>{{card.change > 0 ? 'trending_up' : 'trending_down'}}</mat-icon>
+                  {{card.change > 0 ? '+' : ''}}{{card.change}}%
+                </div>
+              </div>
+              <mat-icon class="stat-icon">{{card.icon}}</mat-icon>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <!-- Filters -->
+      <mat-card class="filters-card">
         <mat-card-content>
-          <table mat-table [dataSource]="users" class="users-table">
+          <div class="filters-row">
+            <mat-form-field appearance="outline" class="search-field">
+              <mat-label>Search users</mat-label>
+              <input matInput [formControl]="searchControl" placeholder="Name, email, or ID">
+              <mat-icon matSuffix>search</mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Status</mat-label>
+              <mat-select [formControl]="statusFilter" multiple>
+                <mat-option value="active">Active</mat-option>
+                <mat-option value="suspended">Suspended</mat-option>
+                <mat-option value="banned">Banned</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Verification</mat-label>
+              <mat-select [formControl]="verificationFilter" multiple>
+                <mat-option value="verified">Verified</mat-option>
+                <mat-option value="pending">Pending</mat-option>
+                <mat-option value="rejected">Rejected</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Role</mat-label>
+              <mat-select [formControl]="roleFilter" multiple>
+                <mat-option value="user">User</mat-option>
+                <mat-option value="moderator">Moderator</mat-option>
+                <mat-option value="admin">Admin</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <button mat-raised-button (click)="clearFilters()">
+              <mat-icon>clear</mat-icon>
+              Clear
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Data Table -->
+      <mat-card class="table-card">
+        <mat-card-content>
+          <div class="table-header">
+            <h2>Users ({{totalUsers()}} total)</h2>
+            <mat-checkbox 
+              [checked]="allSelected()"
+              [indeterminate]="someSelected()"
+              (change)="toggleAll($event.checked)">
+              Select All
+            </mat-checkbox>
+          </div>
+
+          <table mat-table [dataSource]="users()" class="users-table" matSort (matSortChange)="onSortChange($event)">
+            <!-- Selection Column -->
+            <ng-container matColumnDef="select">
+              <th mat-header-cell *matHeaderCellDef></th>
+              <td mat-cell *matCellDef="let user">
+                <mat-checkbox 
+                  [checked]="isSelected(user)"
+                  (change)="toggleSelection(user, $event.checked)">
+                </mat-checkbox>
+              </td>
+            </ng-container>
+
             <!-- Avatar Column -->
             <ng-container matColumnDef="avatar">
               <th mat-header-cell *matHeaderCellDef>Avatar</th>
               <td mat-cell *matCellDef="let user">
-                <img [src]="user.avatar_url || '/assets/default-avatar.png'" 
-                     class="user-avatar" [alt]="user.display_name">
+                <div class="avatar-container">
+                  <img [src]="user.avatar_url || '/assets/default-avatar.png'" 
+                       [alt]="user.display_name" 
+                       class="user-avatar">
+                  <mat-icon *ngIf="user.is_verified" class="verified-badge" color="primary">verified</mat-icon>
+                </div>
               </td>
             </ng-container>
 
             <!-- Name Column -->
             <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef>Name</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header="display_name">Name</th>
               <td mat-cell *matCellDef="let user">
-                <div class="user-name">
-                  <div>{{user.display_name || user.full_name || 'No name'}}</div>
+                <div class="user-info">
+                  <div class="user-name">{{user.display_name}}</div>
                   <div class="user-email">{{user.email}}</div>
+                  <div class="user-id">ID: {{user.user_id}}</div>
                 </div>
               </td>
             </ng-container>
 
             <!-- Status Column -->
             <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>Status</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header="status">Status</th>
               <td mat-cell *matCellDef="let user">
-                <mat-chip-set>
-                  <mat-chip [color]="getStatusColor(user.status)" selected>
-                    {{user.status | titlecase}}
-                  </mat-chip>
-                </mat-chip-set>
-              </td>
-            </ng-container>
-
-            <!-- Verification Column -->
-            <ng-container matColumnDef="verification">
-              <th mat-header-cell *matHeaderCellDef>Verification</th>
-              <td mat-cell *matCellDef="let user">
-                <mat-chip-set>
-                  <mat-chip [color]="getVerificationColor(user.verification_status)" selected>
-                    <mat-icon *ngIf="user.is_verified">verified</mat-icon>
-                    {{user.verification_status | titlecase}}
-                  </mat-chip>
-                </mat-chip-set>
+                <mat-chip [color]="getStatusColor(user.status)" selected>
+                  {{user.status | titlecase}}
+                </mat-chip>
               </td>
             </ng-container>
 
             <!-- Trust Score Column -->
             <ng-container matColumnDef="trustScore">
-              <th mat-header-cell *matHeaderCellDef>Trust Score</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header="trust_score">Trust Score</th>
               <td mat-cell *matCellDef="let user">
-                <div class="trust-score" [class]="getTrustScoreClass(user.trust_score)">
-                  {{user.trust_score}}/100
+                <div class="trust-score-container">
+                  <mat-progress-bar 
+                    mode="determinate" 
+                    [value]="user.trust_score"
+                    [color]="getTrustScoreColor(user.trust_score)">
+                  </mat-progress-bar>
+                  <span class="trust-score-value">{{user.trust_score}}</span>
                 </div>
               </td>
             </ng-container>
 
             <!-- Role Column -->
             <ng-container matColumnDef="role">
-              <th mat-header-cell *matHeaderCellDef>Role</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header="role">Role</th>
               <td mat-cell *matCellDef="let user">
                 <mat-chip [color]="getRoleColor(user.role)" selected>
                   {{user.role | titlecase}}
@@ -118,24 +175,35 @@
                   <mat-icon>more_vert</mat-icon>
                 </button>
                 <mat-menu #userMenu="matMenu">
+                  <button mat-menu-item (click)="viewUserProfile(user)">
+                    <mat-icon>person</mat-icon>
+                    <span>View Profile</span>
+                  </button>
                   <button mat-menu-item (click)="viewUserDetails(user)">
-                    <mat-icon>visibility</mat-icon>
-                    View Details
+                    <mat-icon>info</mat-icon>
+                    <span>View Details</span>
                   </button>
-                  <button mat-menu-item (click)="updateVerification(user, 'verified')" 
-                          *ngIf="user.verification_status !== 'verified'">
-                    <mat-icon>verified</mat-icon>
-                    Verify User
-                  </button>
-                  <button mat-menu-item (click)="updateStatus(user, 'suspended')" 
-                          *ngIf="user.status === 'active'">
-                    <mat-icon>block</mat-icon>
-                    Suspend User
-                  </button>
-                  <button mat-menu-item (click)="updateStatus(user, 'active')" 
-                          *ngIf="user.status !== 'active'">
+                  <mat-divider></mat-divider>
+                  <button mat-menu-item (click)="updateStatus(user, 'active')" *ngIf="user.status !== 'active'">
                     <mat-icon>check_circle</mat-icon>
-                    Activate User
+                    <span>Activate</span>
+                  </button>
+                  <button mat-menu-item (click)="updateStatus(user, 'suspended')" *ngIf="user.status !== 'suspended'">
+                    <mat-icon>pause_circle</mat-icon>
+                    <span>Suspend</span>
+                  </button>
+                  <button mat-menu-item (click)="updateStatus(user, 'banned')" *ngIf="user.status !== 'banned'">
+                    <mat-icon>block</mat-icon>
+                    <span>Ban</span>
+                  </button>
+                  <mat-divider></mat-divider>
+                  <button mat-menu-item (click)="updateVerification(user, 'verified')" *ngIf="!user.is_verified">
+                    <mat-icon>verified</mat-icon>
+                    <span>Verify</span>
+                  </button>
+                  <button mat-menu-item (click)="updateVerification(user, 'rejected')" *ngIf="user.verification_status === 'pending'">
+                    <mat-icon>cancel</mat-icon>
+                    <span>Reject</span>
                   </button>
                 </mat-menu>
               </td>
@@ -146,9 +214,10 @@
           </table>
 
           <mat-paginator 
-            [length]="totalUsers" 
-            [pageSize]="pageSize" 
-            [pageSizeOptions]="[25, 50, 100]"
+            [length]="totalUsers()"
+            [pageSize]="pageSize()"
+            [pageIndex]="currentPage()"
+            [pageSizeOptions]="[25, 50, 100, 200]"
             (page)="onPageChange($event)"
             showFirstLastButtons>
           </mat-paginator>

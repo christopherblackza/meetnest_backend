@@ -1,0 +1,149 @@
+<div class="user-management-container">
+      <!-- Stats Cards -->
+      <div class="stats-grid" *ngIf="stats$ | async as stats">
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-number">{{stats.total_users | number}}</div>
+            <div class="stat-label">Total Users</div>
+          </mat-card-content>
+        </mat-card>
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-number">{{stats.pending_verifications | number}}</div>
+            <div class="stat-label">Pending Verifications</div>
+          </mat-card-content>
+        </mat-card>
+        
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-number">{{stats.reports_pending | number}}</div>
+            <div class="stat-label">Pending Reports</div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <!-- Actions Bar -->
+      <div class="actions-bar">
+        <h2>User Management</h2>
+        <div class="actions">
+          <button mat-raised-button color="primary" (click)="exportUsers()">
+            <mat-icon>download</mat-icon>
+            Export Users
+          </button>
+        </div>
+      </div>
+
+      <!-- Users Table -->
+      <mat-card>
+        <mat-card-content>
+          <table mat-table [dataSource]="users" class="users-table">
+            <!-- Avatar Column -->
+            <ng-container matColumnDef="avatar">
+              <th mat-header-cell *matHeaderCellDef>Avatar</th>
+              <td mat-cell *matCellDef="let user">
+                <img [src]="user.avatar_url || '/assets/default-avatar.png'" 
+                     class="user-avatar" [alt]="user.display_name">
+              </td>
+            </ng-container>
+
+            <!-- Name Column -->
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef>Name</th>
+              <td mat-cell *matCellDef="let user">
+                <div class="user-name">
+                  <div>{{user.display_name || user.full_name || 'No name'}}</div>
+                  <div class="user-email">{{user.email}}</div>
+                </div>
+              </td>
+            </ng-container>
+
+            <!-- Status Column -->
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef>Status</th>
+              <td mat-cell *matCellDef="let user">
+                <mat-chip-set>
+                  <mat-chip [color]="getStatusColor(user.status)" selected>
+                    {{user.status | titlecase}}
+                  </mat-chip>
+                </mat-chip-set>
+              </td>
+            </ng-container>
+
+            <!-- Verification Column -->
+            <ng-container matColumnDef="verification">
+              <th mat-header-cell *matHeaderCellDef>Verification</th>
+              <td mat-cell *matCellDef="let user">
+                <mat-chip-set>
+                  <mat-chip [color]="getVerificationColor(user.verification_status)" selected>
+                    <mat-icon *ngIf="user.is_verified">verified</mat-icon>
+                    {{user.verification_status | titlecase}}
+                  </mat-chip>
+                </mat-chip-set>
+              </td>
+            </ng-container>
+
+            <!-- Trust Score Column -->
+            <ng-container matColumnDef="trustScore">
+              <th mat-header-cell *matHeaderCellDef>Trust Score</th>
+              <td mat-cell *matCellDef="let user">
+                <div class="trust-score" [class]="getTrustScoreClass(user.trust_score)">
+                  {{user.trust_score}}/100
+                </div>
+              </td>
+            </ng-container>
+
+            <!-- Role Column -->
+            <ng-container matColumnDef="role">
+              <th mat-header-cell *matHeaderCellDef>Role</th>
+              <td mat-cell *matCellDef="let user">
+                <mat-chip [color]="getRoleColor(user.role)" selected>
+                  {{user.role | titlecase}}
+                </mat-chip>
+              </td>
+            </ng-container>
+
+            <!-- Actions Column -->
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Actions</th>
+              <td mat-cell *matCellDef="let user">
+                <button mat-icon-button [matMenuTriggerFor]="userMenu">
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+                <mat-menu #userMenu="matMenu">
+                  <button mat-menu-item (click)="viewUserDetails(user)">
+                    <mat-icon>visibility</mat-icon>
+                    View Details
+                  </button>
+                  <button mat-menu-item (click)="updateVerification(user, 'verified')" 
+                          *ngIf="user.verification_status !== 'verified'">
+                    <mat-icon>verified</mat-icon>
+                    Verify User
+                  </button>
+                  <button mat-menu-item (click)="updateStatus(user, 'suspended')" 
+                          *ngIf="user.status === 'active'">
+                    <mat-icon>block</mat-icon>
+                    Suspend User
+                  </button>
+                  <button mat-menu-item (click)="updateStatus(user, 'active')" 
+                          *ngIf="user.status !== 'active'">
+                    <mat-icon>check_circle</mat-icon>
+                    Activate User
+                  </button>
+                </mat-menu>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          </table>
+
+          <mat-paginator 
+            [length]="totalUsers" 
+            [pageSize]="pageSize" 
+            [pageSizeOptions]="[25, 50, 100]"
+            (page)="onPageChange($event)"
+            showFirstLastButtons>
+          </mat-paginator>
+        </mat-card-content>
+      </mat-card>
+    </div>

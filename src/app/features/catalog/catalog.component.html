@@ -1,0 +1,408 @@
+  <div class="catalog-container">
+      <!-- Header -->
+      <div class="catalog-header">
+        <h1>Catalog Management</h1>
+        <div class="header-actions">
+          <button mat-raised-button color="primary" (click)="openCreateDialog()">
+            <mat-icon>add</mat-icon>
+            Add {{ getActiveTabName() }}
+          </button>
+          <button mat-raised-button (click)="exportData()">
+            <mat-icon>download</mat-icon>
+            Export CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="stats-grid">
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-content">
+              <mat-icon class="stat-icon interests">interests</mat-icon>
+              <div class="stat-info">
+                <h3>Total Interests</h3>
+                <p class="stat-number">{{ totalInterests() }}</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-content">
+              <mat-icon class="stat-icon languages">language</mat-icon>
+              <div class="stat-info">
+                <h3>Supported Languages</h3>
+                <p class="stat-number">{{ totalLanguages() }}</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-content">
+              <mat-icon class="stat-icon categories">category</mat-icon>
+              <div class="stat-info">
+                <h3>Categories</h3>
+                <p class="stat-number">{{ totalCategories() }}</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-content">
+              <mat-icon class="stat-icon active">check_circle</mat-icon>
+              <div class="stat-info">
+                <h3>Active Items</h3>
+                <p class="stat-number">{{ activeItems() }}</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <!-- Tabs -->
+      <mat-card class="tabs-card">
+        <mat-tab-group [(selectedIndex)]="selectedTabIndex" (selectedTabChange)="onTabChange($event)">
+          <!-- Interests Tab -->
+          <mat-tab label="Interests">
+            <div class="tab-content">
+              <!-- Filters -->
+              <div class="filters-section">
+                <div class="filters-grid">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Search Interests</mat-label>
+                    <input matInput [formControl]="interestsSearchControl" placeholder="Search by name or description">
+                    <mat-icon matSuffix>search</mat-icon>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Category</mat-label>
+                    <mat-select [formControl]="interestsCategoryControl">
+                      <mat-option value="all">All Categories</mat-option>
+                      @for (category of categories(); track category.id) {
+                        <mat-option [value]="category.id">{{ category.name }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Status</mat-label>
+                    <mat-select [formControl]="interestsStatusControl">
+                      <mat-option value="all">All</mat-option>
+                      <mat-option value="active">Active</mat-option>
+                      <mat-option value="inactive">Inactive</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+              </div>
+
+              <!-- Interests Table -->
+              @if (loadingInterests()) {
+                <div class="loading-container">
+                  <mat-spinner></mat-spinner>
+                  <p>Loading interests...</p>
+                </div>
+              } @else {
+                <div class="table-container">
+                  <table mat-table [dataSource]="interests()" class="data-table" matSort>
+                    <!-- Name Column -->
+                    <ng-container matColumnDef="name">
+                      <th mat-header-cell *matHeaderCellDef mat-sort-header>Name</th>
+                      <td mat-cell *matCellDef="let interest">
+                        <div class="item-name">
+                          @if (interest.icon) {
+                            <mat-icon [style.color]="interest.color">{{ interest.icon }}</mat-icon>
+                          }
+                          <span>{{ interest.name }}</span>
+                          @if (!interest.is_active) {
+                            <mat-chip class="inactive-chip">Inactive</mat-chip>
+                          }
+                        </div>
+                      </td>
+                    </ng-container>
+
+                    <!-- Category Column -->
+                    <ng-container matColumnDef="category">
+                      <th mat-header-cell *matHeaderCellDef>Category</th>
+                      <td mat-cell *matCellDef="let interest">
+                        <mat-chip [style.background-color]="getCategoryColor(interest.category)">
+                          {{ interest.category }}
+                        </mat-chip>
+                      </td>
+                    </ng-container>
+
+                    <!-- Usage Column -->
+                    <ng-container matColumnDef="usage">
+                      <th mat-header-cell *matHeaderCellDef mat-sort-header>Usage Count</th>
+                      <td mat-cell *matCellDef="let interest">
+                        <div class="usage-info">
+                          <span class="usage-number">{{ interest.usage_count }}</span>
+                          <div class="usage-bar">
+                            <div class="usage-fill" [style.width.%]="getUsagePercentage(interest.usage_count)"></div>
+                          </div>
+                        </div>
+                      </td>
+                    </ng-container>
+
+                    <!-- Actions Column -->
+                    <ng-container matColumnDef="actions">
+                      <th mat-header-cell *matHeaderCellDef>Actions</th>
+                      <td mat-cell *matCellDef="let interest">
+                        <div class="actions-buttons">
+                          <button mat-icon-button (click)="editInterest(interest)" matTooltip="Edit">
+                            <mat-icon>edit</mat-icon>
+                          </button>
+                          <button mat-icon-button 
+                                  [color]="interest.is_active ? 'warn' : 'primary'"
+                                  (click)="toggleInterestStatus(interest)" 
+                                  [matTooltip]="interest.is_active ? 'Deactivate' : 'Activate'">
+                            <mat-icon>{{ interest.is_active ? 'visibility_off' : 'visibility' }}</mat-icon>
+                          </button>
+                          <button mat-icon-button color="warn" (click)="deleteInterest(interest)" matTooltip="Delete">
+                            <mat-icon>delete</mat-icon>
+                          </button>
+                        </div>
+                      </td>
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="interestsColumns"></tr>
+                    <tr mat-row *matRowDef="let row; columns: interestsColumns;" (click)="editInterest(row)"></tr>
+                  </table>
+                </div>
+
+                <mat-paginator 
+                  [length]="totalInterests()"
+                  [pageSize]="pageSize()"
+                  [pageSizeOptions]="[10, 25, 50, 100]"
+                  (page)="onPageChange($event)"
+                  showFirstLastButtons>
+                </mat-paginator>
+              }
+            </div>
+          </mat-tab>
+
+          <!-- Languages Tab -->
+          <mat-tab label="Languages">
+            <div class="tab-content">
+              <!-- Filters -->
+              <div class="filters-section">
+                <div class="filters-grid">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Search Languages</mat-label>
+                    <input matInput [formControl]="languagesSearchControl" placeholder="Search by name or code">
+                    <mat-icon matSuffix>search</mat-icon>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Status</mat-label>
+                    <mat-select [formControl]="languagesStatusControl">
+                      <mat-option value="all">All</mat-option>
+                      <mat-option value="active">Active</mat-option>
+                      <mat-option value="inactive">Inactive</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+              </div>
+
+              <!-- Languages Table -->
+              @if (loadingLanguages()) {
+                <div class="loading-container">
+                  <mat-spinner></mat-spinner>
+                  <p>Loading languages...</p>
+                </div>
+              } @else {
+                <div class="table-container">
+                  <table mat-table [dataSource]="languages()" class="data-table" matSort>
+                    <!-- Name Column -->
+                    <ng-container matColumnDef="name">
+                      <th mat-header-cell *matHeaderCellDef mat-sort-header>Language</th>
+                      <td mat-cell *matCellDef="let language">
+                        <div class="language-info">
+                          @if (language.flag_emoji) {
+                            <span class="flag-emoji">{{ language.flag_emoji }}</span>
+                          }
+                          <div class="language-names">
+                            <span class="primary-name">{{ language.name }}</span>
+                            <span class="native-name">{{ language.native_name }}</span>
+                          </div>
+                          @if (!language.is_active) {
+                            <mat-chip class="inactive-chip">Inactive</mat-chip>
+                          }
+                        </div>
+                      </td>
+                    </ng-container>
+
+                    <!-- Code Column -->
+                    <ng-container matColumnDef="code">
+                      <th mat-header-cell *matHeaderCellDef>Code</th>
+                      <td mat-cell *matCellDef="let language">
+                        <mat-chip class="code-chip">{{ language.code }}</mat-chip>
+                      </td>
+                    </ng-container>
+
+                    <!-- Usage Column -->
+                    <ng-container matColumnDef="usage">
+                      <th mat-header-cell *matHeaderCellDef mat-sort-header>Usage Count</th>
+                      <td mat-cell *matCellDef="let language">
+                        <div class="usage-info">
+                          <span class="usage-number">{{ language.usage_count }}</span>
+                          <div class="usage-bar">
+                            <div class="usage-fill" [style.width.%]="getUsagePercentage(language.usage_count)"></div>
+                          </div>
+                        </div>
+                      </td>
+                    </ng-container>
+
+                    <!-- Actions Column -->
+                    <ng-container matColumnDef="actions">
+                      <th mat-header-cell *matHeaderCellDef>Actions</th>
+                      <td mat-cell *matCellDef="let language">
+                        <div class="actions-buttons">
+                          <button mat-icon-button (click)="editLanguage(language)" matTooltip="Edit">
+                            <mat-icon>edit</mat-icon>
+                          </button>
+                          <button mat-icon-button 
+                                  [color]="language.is_active ? 'warn' : 'primary'"
+                                  (click)="toggleLanguageStatus(language)" 
+                                  [matTooltip]="language.is_active ? 'Deactivate' : 'Activate'">
+                            <mat-icon>{{ language.is_active ? 'visibility_off' : 'visibility' }}</mat-icon>
+                          </button>
+                          <button mat-icon-button color="warn" (click)="deleteLanguage(language)" matTooltip="Delete">
+                            <mat-icon>delete</mat-icon>
+                          </button>
+                        </div>
+                      </td>
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="languagesColumns"></tr>
+                    <tr mat-row *matRowDef="let row; columns: languagesColumns;" (click)="editLanguage(row)"></tr>
+                  </table>
+                </div>
+
+                <mat-paginator 
+                  [length]="totalLanguages()"
+                  [pageSize]="pageSize()"
+                  [pageSizeOptions]="[10, 25, 50, 100]"
+                  (page)="onPageChange($event)"
+                  showFirstLastButtons>
+                </mat-paginator>
+              }
+            </div>
+          </mat-tab>
+
+          <!-- Categories Tab -->
+          <mat-tab label="Categories">
+            <div class="tab-content">
+              <!-- Filters -->
+              <div class="filters-section">
+                <div class="filters-grid">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Search Categories</mat-label>
+                    <input matInput [formControl]="categoriesSearchControl" placeholder="Search by name or description">
+                    <mat-icon matSuffix>search</mat-icon>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Status</mat-label>
+                    <mat-select [formControl]="categoriesStatusControl">
+                      <mat-option value="all">All</mat-option>
+                      <mat-option value="active">Active</mat-option>
+                      <mat-option value="inactive">Inactive</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+              </div>
+
+              <!-- Categories Table -->
+              @if (loadingCategories()) {
+                <div class="loading-container">
+                  <mat-spinner></mat-spinner>
+                  <p>Loading categories...</p>
+                </div>
+              } @else {
+                <div class="table-container">
+                  <table mat-table [dataSource]="categories()" class="data-table" matSort>
+                    <!-- Name Column -->
+                    <ng-container matColumnDef="name">
+                      <th mat-header-cell *matHeaderCellDef mat-sort-header>Name</th>
+                      <td mat-cell *matCellDef="let category">
+                        <div class="item-name">
+                          @if (category.icon) {
+                            <mat-icon [style.color]="category.color">{{ category.icon }}</mat-icon>
+                          }
+                          <span>{{ category.name }}</span>
+                          @if (!category.is_active) {
+                            <mat-chip class="inactive-chip">Inactive</mat-chip>
+                          }
+                        </div>
+                      </td>
+                    </ng-container>
+
+                    <!-- Description Column -->
+                    <ng-container matColumnDef="description">
+                      <th mat-header-cell *matHeaderCellDef>Description</th>
+                      <td mat-cell *matCellDef="let category">
+                        <span class="description-text">{{ category.description || 'No description' }}</span>
+                      </td>
+                    </ng-container>
+
+                    <!-- Interests Count Column -->
+                    <ng-container matColumnDef="interests_count">
+                      <th mat-header-cell *matHeaderCellDef mat-sort-header>Interests</th>
+                      <td mat-cell *matCellDef="let category">
+                        <mat-chip class="count-chip">{{ category.interests_count }}</mat-chip>
+                      </td>
+                    </ng-container>
+
+                    <!-- Sort Order Column -->
+                    <ng-container matColumnDef="sort_order">
+                      <th mat-header-cell *matHeaderCellDef mat-sort-header>Order</th>
+                      <td mat-cell *matCellDef="let category">
+                        <span class="sort-order">{{ category.sort_order }}</span>
+                      </td>
+                    </ng-container>
+
+                    <!-- Actions Column -->
+                    <ng-container matColumnDef="actions">
+                      <th mat-header-cell *matHeaderCellDef>Actions</th>
+                      <td mat-cell *matCellDef="let category">
+                        <div class="actions-buttons">
+                          <button mat-icon-button (click)="editCategory(category)" matTooltip="Edit">
+                            <mat-icon>edit</mat-icon>
+                          </button>
+                          <button mat-icon-button 
+                                  [color]="category.is_active ? 'warn' : 'primary'"
+                                  (click)="toggleCategoryStatus(category)" 
+                                  [matTooltip]="category.is_active ? 'Deactivate' : 'Activate'">
+                            <mat-icon>{{ category.is_active ? 'visibility_off' : 'visibility' }}</mat-icon>
+                          </button>
+                          <button mat-icon-button color="warn" (click)="deleteCategory(category)" matTooltip="Delete">
+                            <mat-icon>delete</mat-icon>
+                          </button>
+                        </div>
+                      </td>
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="categoriesColumns"></tr>
+                    <tr mat-row *matRowDef="let row; columns: categoriesColumns;" (click)="editCategory(row)"></tr>
+                  </table>
+                </div>
+
+                <mat-paginator 
+                  [length]="totalCategories()"
+                  [pageSize]="pageSize()"
+                  [pageSizeOptions]="[10, 25, 50, 100]"
+                  (page)="onPageChange($event)"
+                  showFirstLastButtons>
+                </mat-paginator>
+              }
+            </div>
+          </mat-tab>
+        </mat-tab-group>
+      </mat-card>
+    </div>

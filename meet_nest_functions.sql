@@ -9,10 +9,8 @@ CREATE OR REPLACE FUNCTION get_analytics_overview(
 RETURNS TABLE (
     total_users bigint,
     active_users bigint,
-    total_revenue numeric,
     total_subscriptions bigint,
-    growth_rate numeric,
-    churn_rate numeric
+    total_reports bigint
 ) AS $$
 DECLARE
     filter_start_date date;
@@ -45,12 +43,10 @@ BEGIN
 
     RETURN QUERY
     SELECT 
-        (SELECT COUNT(*) FROM user_profiles)::bigint as total_users,
-        (SELECT COUNT(*) FROM user_profiles WHERE status = 'active')::bigint as active_users,
-        COALESCE((SELECT SUM(amount_cents)::float / 100 FROM payments WHERE status = 'succeeded'), 0)::numeric as total_revenue,
-        (SELECT COUNT(*) FROM subscriptions WHERE status = 'active')::bigint as total_subscriptions,
-        COALESCE((SELECT uao.growth_rate FROM user_analytics_overview uao), 0)::numeric as growth_rate,
-        COALESCE((SELECT rao.churn_rate FROM revenue_analytics_overview rao), 0)::numeric as churn_rate;
+        (SELECT COUNT(*) FROM user_profiles)::bigint AS total_users,
+        (SELECT COUNT(*) FROM user_profiles WHERE status = 'active')::bigint AS active_users,
+        (SELECT COUNT(*) FROM subscriptions WHERE status = 'active' AND created_at BETWEEN filter_start_date AND filter_end_date)::bigint AS total_subscriptions,
+        (SELECT COUNT(*) FROM user_reports WHERE created_at BETWEEN filter_start_date AND filter_end_date)::bigint AS total_reports;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -194,5 +190,137 @@ BEGIN
         )
         FROM popular_interests_analytics
     );
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get user reports grid with proper foreign key relationships
+CREATE OR REPLACE FUNCTION get_user_reports_grid(
+    page_num integer DEFAULT 0,
+    page_size integer DEFAULT 10,
+    sort_by text DEFAULT 'created_at',
+    sort_order text DEFAULT 'desc',
+    search_text text DEFAULT NULL,
+    filter_status text DEFAULT NULL,
+    filter_reason text DEFAULT NULL,
+    filter_date_from timestamptz DEFAULT NULL,
+    filter_date_to timestamptz DEFAULT NULL
+)
+RETURNS TABLE (
+    id uuid,
+    reporter_id uuid,
+    reported_id uuid,
+    reviewer_id uuid,
+    reason text,
+    details text,
+    status text,
+    created_at timestamptz,
+    updated_at timestamptz,
+    reporter_display_name text,
+    reporter_email text,
+    reported_display_name text,
+    reported_email text,
+    total_count bigint
+) AS $$
+DECLARE
+    offset_val integer;
+    query_text text;
+    count_query text;
+    total_records bigint;
+BEGIN
+    -- Calculate offset
+    offset_val := page_num * page_size;
+    
+    -- Build the main query
+    query_text := '
+        SELECT 
+            ur.id,
+            ur.reporter_id,
+            ur.reported_id,
+            ur.reviewer_id,
+            ur.reason,
+            ur.details,
+            ur.status,
+            ur.created_at,
+            ur.updated_at,
+            reporter.display_name as reporter_display_name,
+            reporter.email as reporter_email,
+            reported.display_name as reported_display_name,
+            reported.email as reported_email,
+            (SELECT COUNT(*) FROM user_reports ur2 WHERE 1=1';
+    
+    -- Build the count query
+    count_query := 'SELECT COUNT(*) FROM user_reports ur WHERE 1=1';
+    
+    -- Add search condition
+    IF search_text IS NOT NULL THEN
+        query_text := query_text || ' AND (ur.reason ILIKE ''%' || search_text || '%'' OR ur.details ILIKE ''%' || search_text || '%'')';
+        count_query := count_query || ' AND (ur.reason ILIKE ''%' || search_text || '%'' OR ur.details ILIKE ''%' || search_text || '%'')';
+    END IF;
+    
+    -- Add status filter
+    IF filter_status IS NOT NULL THEN
+        query_text := query_text || ' AND ur.status = ''' || filter_status || '''''';
+        count_query := count_query || ' AND ur.status = ''' || filter_status || '''''';
+    END IF;
+    
+    -- Add reason filter
+    IF filter_reason IS NOT NULL THEN
+        query_text := query_text || ' AND ur.reason = ''' || filter_reason || '''''';
+        count_query := count_query || ' AND ur.reason = ''' || filter_reason || '''''';
+    END IF;
+    
+    -- Add date filters
+    IF filter_date_from IS NOT NULL THEN
+        query_text := query_text || ' AND ur.created_at >= ''' || filter_date_from || '''''';
+        count_query := count_query || ' AND ur.created_at >= ''' || filter_date_from || '''''';
+    END IF;
+    
+    IF filter_date_to IS NOT NULL THEN
+        query_text := query_text || ' AND ur.created_at <= ''' || filter_date_to || '''''';
+        count_query := count_query || ' AND ur.created_at <= ''' || filter_date_to || '''''';
+    END IF;
+    
+    -- Complete the main query
+    query_text := query_text || ') as total_count
+        FROM user_reports ur
+        LEFT JOIN user_profiles reporter ON ur.reporter_id = reporter.user_id
+        LEFT JOIN user_profiles reported ON ur.reported_id = reported.user_id
+        WHERE 1=1';
+    
+    -- Add the same filters to main query
+    IF search_text IS NOT NULL THEN
+        query_text := query_text || ' AND (ur.reason ILIKE ''%' || search_text || '%'' OR ur.details ILIKE ''%' || search_text || '%'')';
+    END IF;
+    
+    IF filter_status IS NOT NULL THEN
+        query_text := query_text || ' AND ur.status = ''' || filter_status || '''''';
+    END IF;
+    
+    IF filter_reason IS NOT NULL THEN
+        query_text := query_text || ' AND ur.reason = ''' || filter_reason || '''''';
+    END IF;
+    
+    IF filter_date_from IS NOT NULL THEN
+        query_text := query_text || ' AND ur.created_at >= ''' || filter_date_from || '''''';
+    END IF;
+    
+    IF filter_date_to IS NOT NULL THEN
+        query_text := query_text || ' AND ur.created_at <= ''' || filter_date_to || '''''';
+    END IF;
+    
+    -- Add sorting
+    query_text := query_text || ' ORDER BY ur.' || sort_by || ' ' || sort_order || 
+                  ' LIMIT ' || page_size || ' OFFSET ' || offset_val;
+    
+    -- Execute count query to get total records
+    EXECUTE count_query INTO total_records;
+    
+    -- Return the query results with total count
+    RETURN QUERY EXECUTE query_text;
+    
+    -- Also return total count in each row
+    RETURN QUERY SELECT NULL::uuid, NULL::uuid, NULL::uuid, NULL::uuid, NULL::text, NULL::text, NULL::text, 
+                        NULL::timestamptz, NULL::timestamptz, NULL::text, NULL::text, NULL::text, NULL::text, total_records
+                 WHERE false; -- This ensures we only get the total count once
 END;
 $$ LANGUAGE plpgsql;

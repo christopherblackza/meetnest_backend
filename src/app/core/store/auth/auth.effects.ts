@@ -1,7 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Router } from '@angular/router';
-import { of } from 'rxjs';
 import { map, exhaustMap, catchError, tap, switchMap } from 'rxjs/operators';
 import { SupabaseService } from '../../services/supabase.service';
 import * as AuthActions from './auth.actions';

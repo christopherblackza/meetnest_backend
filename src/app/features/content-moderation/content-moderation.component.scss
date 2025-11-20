@@ -55,6 +55,105 @@
   margin-bottom: 32px;
 }
 
+// Content Type and Flag Type Chips
+.content-type-chip, .flag-type-chip, .action-type-chip {
+  font-size: 12px;
+  font-weight: 500;
+  
+  .type-icon, .action-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+  }
+  
+  &.type-profile {
+    background-color: #e3f2fd;
+    color: #1976d2;
+  }
+  
+  &.type-message {
+    background-color: #f3e5f5;
+    color: #7b1fa2;
+  }
+  
+  &.type-photo {
+    background-color: #e8f5e8;
+    color: #388e3c;
+  }
+  
+  &.type-event {
+    background-color: #fff3e0;
+    color: #f57c00;
+  }
+  
+  &.type-meetup {
+    background-color: #fce4ec;
+    color: #c2185b;
+  }
+  
+  &.flag-inappropriate {
+    background-color: #ffebee;
+    color: #d32f2f;
+  }
+  
+  &.flag-spam {
+    background-color: #fff3e0;
+    color: #f57c00;
+  }
+  
+  &.flag-fake {
+    background-color: #f3e5f5;
+    color: #7b1fa2;
+  }
+  
+  &.flag-harassment {
+    background-color: #ffebee;
+    color: #d32f2f;
+  }
+  
+  &.action-warning {
+    background-color: #fff8e1;
+    color: #f57f17;
+  }
+  
+  &.action-temporary_suspension {
+    background-color: #fff3e0;
+    color: #ef6c00;
+  }
+  
+  &.action-permanent_ban {
+    background-color: #ffebee;
+    color: #c62828;
+  }
+  
+  &.action-content_removal {
+    background-color: #fce4ec;
+    color: #ad1457;
+  }
+  
+  &.action-profile_restriction {
+    background-color: #e8eaf6;
+    color: #3f51b5;
+  }
+}
+
+.flag-details, .action-duration {
+  font-size: 0.75rem;
+  color: var(--mdc-theme-on-surface-variant, #666);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.reason-text {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .stat-card {
   border-radius: 16px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);

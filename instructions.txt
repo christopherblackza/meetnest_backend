@@ -1,0 +1,244 @@
+Solution — Prompt to give the AI builder
+
+System / Role
+You are an expert Angular 19 + Supabase engineer. Build a modular, secure admin dashboard that plugs into the exact schema and RPCs below. Optimize for maintainability, auditability, and speed.
+
+Tech Guardrails
+
+Angular 19, Standalone APIs, Signals where sensible.
+
+Routing with lazy-loaded feature areas.
+
+TanStack Table or Angular Material Table for data grids (server-side pagination/sort/filter).
+
+Supabase JS v2 client; call RPCs via supabase.rpc() where defined; otherwise use PostgREST with typed selects.
+
+State: light signals; avoid heavy NgRx unless needed.
+
+Auth: Supabase auth; route-guards for role in ('admin','moderator'). Hide admin routes for regular users.
+
+UX: dark-mode friendly; keyboard navigation; toast notifications; optimistic updates with rollback on error.
+
+Authoritative Data Model (must integrate exactly)
+
+Users & Profiles: user_profiles (role: 'user'|'admin'|'moderator', status: 'active'|'suspended'|'banned', trust_score 0–100, social/meta fields). 
+
+meet_nest_tables
+
+Preferences: user_preferences (+ update_user_preferences, get_user_preferences). 
+
+meet_nest_functions
+
+Social graph / chats: chats, participants, messages (with create_message, get_chat_screen). 
+
+meet_nest_tables
+
+ 
+
+meet_nest_functions
+
+Events: events, event_attendees (+ create_event, get_event_details, get_user_active_events, get_user_past_events, get_events_in_bounds). 
+
+meet_nest_tables
+
+ 
+
+meet_nest_functions
+
+Meetups (Hangouts): meetups (+ create_meetup, get_user_active_meetups, get_user_past_meetups, get_meetups_in_bounds). 
+
+meet_nest_tables
+
+ 
+
+meet_nest_functions
+
+Subscriptions & Billing: plans, subscriptions, payments (+ upgrade_to_pro_plan, downgrade_to_free_plan, record_subscription_payment, redeem_promo_code). Plans are seeded (Weekly/Monthly/3-Months, ZAR). One active subscription per user via unique_user_subscription. 
+
+meet_nest_tables
+
+ 
+
+meet_nest_seed_data
+
+ 
+
+meet_nest_functions
+
+Safety/moderation: user_reports, moderation_actions, user_blocks, content_flags, plus calculate_user_trust_score. 
+
+meet_nest_tables
+
+ 
+
+meet_nest_functions
+
+Misc: user_photos, user_push_tokens, future_trips, cities, profile_views, boosts. 
+
+meet_nest_tables
+
+Feature Map (deliver these routes & screens)
+
+/dashboard (Overview)
+
+KPI cards (last 7/30 days): New users, Active users, Active paid users, Churned subs, Meetups created, Events created, Total attendees, Reports opened/resolved.
+
+Small charts with server-side date filters (UTC). Compute counts from user_profiles, subscriptions (status & date ranges), events/event_attendees, meetups, user_reports. 
+
+meet_nest_tables
+
+/users (Management)
+
+Data grid: avatar, display_name, email, role, status, trust_score, created_at.
+
+Filters: role, status, min/max trust_score, date range, city/country.
+
+Actions (row-level): View Profile (drawer), Edit core fields, Change role, Suspend/Ban (toggle status), Recalculate trust score (call calculate_user_trust_score(user_id)), View reports filed/received, Block/Unblock users via user_blocks.
+
+Profile drawer shows preferences (get/update via RPC), photos, languages/interests, relationship_status (from get_user_profile). 
+
+meet_nest_functions
+
+/subscriptions (Plans & Customers)
+
+Plans tab: list from plans; create/update plan rows (name, interval 'week'|'month'|'3_months', price_cents, currency). 
+
+meet_nest_tables
+
+Customers tab: join subscriptions→plans→user_profiles. Columns: plan, status ('active'|'past_due'|'canceled'|'trialing'|'non_renewing'), start_date, cancel_at, provider codes. Row actions: Upgrade/Downgrade via upgrade_to_pro_plan / downgrade_to_free_plan, “Record Payment” via record_subscription_payment(...), “Redeem Promo” via redeem_promo_code(code). 
+
+meet_nest_functions
+
+/events (Events)
+
+Grid & map toggle. Columns: title, start/end, public, lat/lng, max_participants, attendee_count (join event_attendees), created_by.
+
+Create/Edit Event modal — call create_event(...), auto-adds creator as attendee and creates chat. Show chat_id link. 
+
+meet_nest_functions
+
+View detail panel using get_event_details(event_id, admin_user_id) including attendee list and “Add/Remove attendee”. 
+
+meet_nest_functions
+
+Bounds filter using get_events_in_bounds for the map viewport. 
+
+meet_nest_functions
+
+/meetups (Hangouts)
+
+Similar to Events with grid/map, using meetups + participants via chats→participants.
+
+Create/Edit Meetup modal — call create_meetup(...) (security definer). Include emoticon, female_only, expires_at. 
+
+meet_nest_functions
+
+“Active/Past” tabs backed by get_user_active_meetups / get_user_past_meetups. 
+
+meet_nest_functions
+
+/moderation (Safety)
+
+Reports Queue: list user_reports (status workflow: pending→reviewed→resolved/dismissed/action_taken). Batch actions; open report drawer to see reporter, reported, reason, details, history.
+
+One-click actions: issue warning, suspend/ban (write user_profiles.status), log moderation_actions.
+
+Button to recompute trust score (calculate_user_trust_score) and display delta. 
+
+meet_nest_tables
+
+ 
+
+meet_nest_functions
+
+Flags: view content_flags by type (profile/message/bio/photo) with approve/remove flow. 
+
+meet_nest_tables
+
+/messaging (Comms Oversight)
+
+Searchable list of chats with counts & last activity; open a chat read-only viewer (messages joined to author profile). Use get_chat_screen(chat_id, admin_user_id) for unified fetch. 
+
+meet_nest_functions
+
+/notifications (System)
+
+Manage user_push_tokens (platform), send test push to a user, view notifications if present. 
+
+meet_nest_tables
+
+/catalog (Taxonomies)
+
+Interests (id, name, emoticon) with categories; languages; genders. Read/write with safety checks. Seed set exists; allow admin add/edit. 
+
+meet_nest_seed_data
+
+Cross-Cutting Requirements
+
+Role-based Access: Only admins can change roles/plans, perform moderation, and edit plans; moderators can process reports & flags.
+
+Auditability: Log who did what (moderation_actions; also include a lightweight client-side audit service to append context to action payloads).
+
+Performance: Server-side pagination, composite indexes already exist on some tables (reuse). Don’t pull N+1; prefer RPCs where they exist. 
+
+meet_nest_tables
+
+Maps: For events/meetups, show a map (library of choice) with bounds filter wired to the *_in_bounds RPCs. 
+
+meet_nest_functions
+
+Exports: CSV export for grid filters (users, events, meetups, subscriptions, reports).
+
+Validation: Prevent invalid state transitions (e.g., cannot set status='active' for a user with banned flag without explicit override).
+
+Time: All timestamps UTC; display local with timezone label; date-range pickers default to last 30d.
+
+Key RPC & Table Operations (examples the code must implement)
+
+Profiles: select * from user_profiles order by created_at desc limit :pageSize offset :offset; update role/status; call get_user_profile(uid, admin_uid) in drawer to fetch interests/photos/relationship & subscription snapshot. 
+
+meet_nest_functions
+
+Preferences: get_user_preferences(uid), update_user_preferences(...). 
+
+meet_nest_functions
+
+Events: create_event(...), get_event_details(...), get_events_in_bounds(admin_uid, minLat,maxLat,minLng,maxLng). 
+
+meet_nest_functions
+
+Meetups: create_meetup(...), get_meetups_in_bounds(...). 
+
+meet_nest_functions
+
+Subs: list subscriptions joined to plans; call upgrade_to_pro_plan(), downgrade_to_free_plan(), record_subscription_payment(...), redeem_promo_code(code). 
+
+meet_nest_functions
+
+Moderation: list user_reports, write moderation_actions, call calculate_user_trust_score(user_id). 
+
+meet_nest_functions
+
+Messaging: get_chat_screen(chat_id, admin_uid); show message stream with author display_name/avatar. 
+
+meet_nest_functions
+
+Deliverables
+
+Angular workspace with feature folders: dashboard/, users/, subscriptions/, events/, meetups/, moderation/, messaging/, notifications/, catalog/.
+
+Reusable DataTableComponent (server-side), DateRangeFilter, MapBoundsFilter, ConfirmDialog.
+
+supabaseClient factory + typed helpers (rpc<T>, from<T>).
+
+Route guards for admin/moderator; 404/403 pages.
+
+E2E happy paths for the main CRUD + RPC actions.
+
+Nice-to-Haves (if time)
+
+Impersonate user (read-only preview) for support.
+
+Bulk actions (suspend many users; resolve many reports).
+
+Webhooks page for provider events (if/when added).

@@ -9,6 +9,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatListModule } from '@angular/material/list';
 import { UserManagementService } from '../services/user-management.service';
 import { UserProfile } from '../models/user.models';
+import { firstValueFrom } from 'rxjs';
 
 
 @Component({
@@ -158,29 +159,22 @@ import { UserProfile } from '../models/user.models';
   `]
 })
 export class UserProfileComponent implements OnInit {
-  private route: ActivatedRoute;
-  private router: Router;
-  private userService: UserManagementService;
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private userService = inject(UserManagementService);
   
   user: UserProfile | null = null;
   
-  constructor() {
-    this.route = inject(ActivatedRoute);
-    this.router = inject(Router);
-    this.userService = inject(UserManagementService);
-  }
-  
-  ngOnInit() {
+  ngOnInit(): void {
     const userId = this.route.snapshot.paramMap.get('id');
     if (userId) {
       this.loadUser(userId);
     }
   }
   
-  async loadUser(userId: string) {
+  async loadUser(userId: string): Promise<void> {
     try {
-      const result = await this.userService.getUserById(userId).toPromise();
-      this.user = result ?? null;
+      this.user = await firstValueFrom(this.userService.getUserById(userId));
     } catch (error) {
       console.error('Error loading user:', error);
       this.user = null;
@@ -193,7 +187,7 @@ export class UserProfileComponent implements OnInit {
     return 'low';
   }
   
-  goBack() {
+  goBack(): void {
     this.router.navigate(['/users']);
   }
 }

@@ -1,0 +1,50 @@
+import { Injectable } from '@angular/core';
+import { CanActivate, Router } from '@angular/router';
+import { Observable } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
+import { SupabaseService, UserProfile } from '../services/supabase.service';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class ModeratorGuard implements CanActivate {
+
+  constructor(
+    private supabaseService: SupabaseService,
+    private router: Router
+  ) {}
+
+  canActivate(): Observable<boolean> {
+    return this.supabaseService.currentUser$.pipe(
+      switchMap(user => {
+        console.error('USER:', user);
+        if (!user) {
+          this.router.navigate(['/auth']);
+          return new Observable<boolean>(observer => {
+            observer.next(false);
+            observer.complete();
+          });
+        }
+        
+        // Get user profile to check role
+        return new Observable<boolean>(observer => {
+          this.supabaseService.getUserProfile(user.id, user.id).then((profile: UserProfile) => {
+            console.error('User profile:', profile);
+            if (profile && (profile.role === 'moderator' || profile.role === 'admin')) {
+              observer.next(true);
+            } else {
+              this.router.navigate(['/unauthorized']);
+              observer.next(false);
+            }
+            observer.complete();
+          }).catch((error: any) => {
+            console.error('Error checking moderator access:', error);
+            this.router.navigate(['/unauthorized']);
+            observer.next(false);
+            observer.complete();
+          });
+        });
+      })
+    );
+  }
+}

@@ -1,0 +1,118 @@
+  <div class="dialog-header">
+      <h2 mat-dialog-title>
+        <span class="emoticon">{{ meetup.emoticon }}</span>
+        {{ meetup.title }}
+      </h2>
+      <button mat-icon-button (click)="onClose()" class="close-button">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <mat-dialog-content class="dialog-content">
+      <div class="meetup-details">
+        <!-- Basic Information -->
+        <mat-card class="info-card">
+          <mat-card-header>
+            <mat-card-title>Meetup Details</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="detail-row">
+              <strong>Description:</strong>
+              <p>{{ meetup.description }}</p>
+            </div>
+            
+            <div class="detail-row">
+              <strong>Location:</strong>
+              <p>{{ meetup.latitude }}, {{ meetup.longitude }}</p>
+            </div>
+            
+            <div class="detail-row">
+              <strong>Maximum Participants:</strong>
+              <p>{{ meetup.max_participants }}</p>
+            </div>
+            
+            <div class="detail-row">
+              <strong>Expires At:</strong>
+              <p>{{ formatDate(meetup.expires_at) }}</p>
+            </div>
+            
+            <div class="detail-row">
+              <strong>Created:</strong>
+              <p>{{ formatDate(meetup.created_at) }}</p>
+            </div>
+            
+            <div class="chips-container">
+              <mat-chip-set>
+                <mat-chip [color]="meetup.is_active ? 'primary' : 'warn'" selected>
+                  <!-- {{ meetup.is_active ? 'Active' : 'Inactive' }} -->
+                </mat-chip>
+                <mat-chip *ngIf="meetup.female_only" color="accent" selected>
+                  Female Only
+                </mat-chip>
+              </mat-chip-set>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Creator Information -->
+        <mat-card class="info-card" *ngIf="meetupDetails?.creator">
+          <mat-card-header>
+            <mat-card-title>Creator</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="creator-info">
+              <img 
+                [src]="meetupDetails.creator.avatar_url || '/assets/default-avatar.png'" 
+                [alt]="meetupDetails.creator.full_name"
+                class="avatar"
+              >
+              <div class="creator-details">
+                <h4>{{ meetupDetails.creator.full_name }}</h4>
+                <p class="creator-id">ID: {{ meetupDetails.creator.id }}</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Participants -->
+        <mat-card class="info-card">
+          <mat-card-header>
+            <mat-card-title>
+              Participants ({{ meetupDetails?.participants?.length || 0 }}/{{ meetup.max_participants }})
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div *ngIf="loadingParticipants" class="loading-container">
+              <mat-spinner diameter="40"></mat-spinner>
+              <p>Loading participants...</p>
+            </div>
+            
+            <mat-list *ngIf="!loadingParticipants && meetupDetails?.participants?.length">
+              <mat-list-item *ngFor="let participant of meetupDetails.participants">
+                <img 
+                  matListItemAvatar 
+                  [src]="participant.avatar_url || '/assets/default-avatar.png'" 
+                  [alt]="participant.full_name"
+                >
+                <div matListItemTitle>{{ participant.full_name }}</div>
+                <div matListItemLine>Joined: {{ formatDate(participant.joined_at) }}</div>
+              </mat-list-item>
+            </mat-list>
+            
+            <div *ngIf="!loadingParticipants && (!meetupDetails?.participants || meetupDetails?.participants?.length === 0)" class="no-participants">
+              <mat-icon>group_off</mat-icon>
+              <p>No participants yet</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end">
+      <button mat-button (click)="onClose()">Close</button>
+      <button mat-raised-button color="primary" (click)="onEdit()">
+        <mat-icon>edit</mat-icon>
+        Edit Meetup
+      </button>
+    </mat-dialog-actions>
+  `

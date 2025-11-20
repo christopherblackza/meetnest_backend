@@ -1,0 +1,300 @@
+<app-navigation></app-navigation>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Clients Management</h1>
+        <button
+          (click)="showForm = !showForm"
+          class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
+        >
+          {{ showForm ? "Cancel" : "Add New Client" }}
+        </button>
+      </div>
+
+      <!-- Add/Edit Form -->
+      <div *ngIf="showForm" class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">
+          {{ editingId() ? "Edit Client" : "Add New Client" }}
+        </h2>
+
+        <form (ngSubmit)="saveClient()" class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Name</label
+              >
+              <input
+                type="text"
+                [(ngModel)]="formData.name"
+                name="name"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Type</label
+              >
+              <select
+                [(ngModel)]="formData.type"
+                name="type"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                <option value="">Select type</option>
+                <option value="bar">Bar</option>
+                <option value="restaurant">Restaurant</option>
+                <option value="cafe">Cafe</option>
+                <option value="gym">Gym</option>
+                <option value="market">Market</option>
+                <option value="volunteering">Volunteering</option>
+                <option value="social">Social</option>
+              </select>
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Description</label
+              >
+              <textarea
+                [(ngModel)]="formData.description"
+                name="description"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows="3"
+                required
+              ></textarea>
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Location</label
+              >
+              <div class="flex items-center gap-2">
+                <div class="flex-1 grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    [(ngModel)]="formData.latitude"
+                    name="latitude"
+                    placeholder="Latitude"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="number"
+                    [(ngModel)]="formData.longitude"
+                    name="longitude"
+                    placeholder="Longitude"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <button
+                  type="button"
+                  (click)="showMapSelector.set(true)"
+                  class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 whitespace-nowrap"
+                >
+                  Select on Map
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Address</label
+              >
+              <input
+                type="text"
+                [(ngModel)]="formData.address"
+                name="address"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Contact Number</label
+              >
+              <input
+                type="text"
+                [(ngModel)]="formData.contact_number"
+                name="contact_number"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Email</label
+              >
+              <input
+                type="email"
+                [(ngModel)]="formData.email"
+                name="email"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Website</label
+              >
+              <input
+                type="url"
+                [(ngModel)]="formData.website_url"
+                name="website_url"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Instagram</label
+              >
+              <input
+                type="url"
+                [(ngModel)]="formData.instagram_url"
+                name="instagram_url"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Google Maps Link</label
+              >
+              <input
+                type="url"
+                [(ngModel)]="formData.google_maps_link"
+                name="google_maps_link"
+                placeholder="https://maps.google.com/..."
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Rating</label
+              >
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="5"
+                [(ngModel)]="formData.rating"
+                name="rating"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div class="flex gap-4">
+            <button
+              type="submit"
+              [disabled]="isSaving()"
+              class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
+            >
+              {{
+                isSaving()
+                  ? "Saving..."
+                  : editingId()
+                    ? "Update Client"
+                    : "Add Client"
+              }}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Map Selector Modal -->
+      <div
+        *ngIf="showMapSelector()"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      >
+        <div
+          class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        >
+          <app-map-selector
+            [initialLat]="formData.latitude"
+            [initialLng]="formData.longitude"
+            (locationSelected)="onLocationSelected($event)"
+            (closed)="showMapSelector.set(false)"
+          ></app-map-selector>
+        </div>
+      </div>
+
+      <!-- Clients Table -->
+      <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div *ngIf="isLoading()" class="p-8 text-center text-gray-500">
+          Loading clients...
+        </div>
+
+        <div
+          *ngIf="!isLoading() && clients().length === 0"
+          class="p-8 text-center text-gray-500"
+        >
+          No clients found. Create your first client!
+        </div>
+
+        <table *ngIf="!isLoading() && clients().length > 0" class="w-full">
+          <thead class="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th
+                class="px-6 py-3 text-left text-sm font-semibold text-gray-900"
+              >
+                Name
+              </th>
+              <th
+                class="px-6 py-3 text-left text-sm font-semibold text-gray-900"
+              >
+                Type
+              </th>
+              <th
+                class="px-6 py-3 text-left text-sm font-semibold text-gray-900"
+              >
+                Location
+              </th>
+              <th
+                class="px-6 py-3 text-left text-sm font-semibold text-gray-900"
+              >
+                Rating
+              </th>
+              <th
+                class="px-6 py-3 text-left text-sm font-semibold text-gray-900"
+              >
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            <tr *ngFor="let client of clients()" class="hover:bg-gray-50">
+              <td class="px-6 py-4 text-sm text-gray-900">{{ client.name }}</td>
+              <td class="px-6 py-4 text-sm text-gray-600">
+                <span
+                  class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold"
+                  >{{ client.type }}</span
+                >
+              </td>
+              <td class="px-6 py-4 text-sm text-gray-600">
+                {{ client.latitude.toFixed(4) }},
+                {{ client.longitude.toFixed(4) }}
+              </td>
+              <td class="px-6 py-4 text-sm text-gray-600">
+                {{ client.rating }}/5
+              </td>
+              <td class="px-6 py-4 text-sm space-x-2">
+                <button
+                  (click)="editClient(client)"
+                  class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-3 rounded transition duration-200"
+                >
+                  Edit
+                </button>
+                <button
+                  (click)="deleteClient(client.id)"
+                  class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded transition duration-200"
+                >
+                  Delete
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>

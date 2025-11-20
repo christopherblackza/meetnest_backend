@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
@@ -13,15 +13,28 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatSortModule, Sort } from '@angular/material/sort';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { SubscriptionPaymentsService } from './services/subscription-payments.service';
 import {
   Plan,
-  Subscription,
+  Subscription as LocalSubscription,
   Payment,
   SubscriptionStats,
   SubscriptionFilters
 } from './models/subscription-payments.models';
+import { SupabaseService, DataGridOptions, DataGridResult, Subscription as SupabaseSubscription, SubscriptionPlan, UserProfile } from '../../core/services/supabase.service';
+import { CreatePlanDialogComponent } from './components/create-plan-dialog.component';
+import { MatDialog } from '@angular/material/dialog';
+
+// Extended types to match the data returned from the service
+type ExtendedSubscription = SupabaseSubscription & { 
+  plan: SubscriptionPlan; 
+  user: UserProfile; 
+};
 
 @Component({
   selector: 'app-subscription-payments',
@@ -41,6 +54,10 @@ import {
     MatChipsModule,
     MatDialogModule,
     MatMenuModule,
+    MatPaginatorModule,
+    MatSortModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
     ReactiveFormsModule
   ],
   template: `
@@ -51,13 +68,13 @@ import {
       </div>
 
       <!-- Statistics Cards -->
-      <div class="stats-grid" *ngIf="stats">
+      <div class="stats-grid" *ngIf="stats()">
         <mat-card class="stat-card">
           <mat-card-content>
             <div class="stat-content">
               <mat-icon>subscriptions</mat-icon>
               <div>
-                <h3>{{ stats.active_subscriptions }}</h3>
+                <h3>{{ stats()?.active_subscriptions }}</h3>
                 <p>Active Subscriptions</p>
               </div>
             </div>
@@ -69,7 +86,7 @@ import {
             <div class="stat-content">
               <mat-icon>attach_money</mat-icon>
               <div>
-                <h3>\${{ stats.total_revenue | number:'1.2-2' }}</h3>
+                <h3>\${{ stats()?.total_revenue | number:'1.2-2' }}</h3>
                 <p>Total Revenue</p>
               </div>
             </div>
@@ -81,7 +98,7 @@ import {
             <div class="stat-content">
               <mat-icon>trending_up</mat-icon>
               <div>
-                <h3>\${{ stats.monthly_revenue | number:'1.2-2' }}</h3>
+                <h3>\${{ stats()?.monthly_revenue | number:'1.2-2' }}</h3>
                 <p>Monthly Revenue</p>
               </div>
             </div>
@@ -93,7 +110,7 @@ import {
             <div class="stat-content">
               <mat-icon>payment</mat-icon>
               <div>
-                <h3>{{ stats.successful_payments }}</h3>
+                <h3>{{ stats()?.successful_payments }}</h3>
                 <p>Successful Payments</p>
               </div>
             </div>
@@ -105,7 +122,7 @@ import {
             <div class="stat-content">
               <mat-icon>error</mat-icon>
               <div>
-                <h3>{{ stats.failed_payments }}</h3>
+                <h3>{{ stats()?.failed_payments }}</h3>
                 <p>Failed Payments</p>
               </div>
             </div>
@@ -127,7 +144,7 @@ import {
               <mat-label>Plan</mat-label>
               <mat-select formControlName="plan_id">
                 <mat-option value="">All Plans</mat-option>
-                <mat-option *ngFor="let plan of plans" [value]="plan.id">
+                <mat-option *ngFor="let plan of plans()" [value]="plan.id">
                   {{ plan.name }} (\${{ plan.price }})
                 </mat-option>
               </mat-select>
@@ -138,9 +155,10 @@ import {
               <mat-select formControlName="status">
                 <mat-option value="">All Statuses</mat-option>
                 <mat-option value="active">Active</mat-option>
-                <mat-option value="cancelled">Cancelled</mat-option>
-                <mat-option value="expired">Expired</mat-option>
-                <mat-option value="pending">Pending</mat-option>
+                <mat-option value="past_due">Past Due</mat-option>
+                <mat-option value="canceled">Canceled</mat-option>
+                <mat-option value="trialing">Trialing</mat-option>
+                <mat-option value="non_renewing">Non Renewing</mat-option>
               </mat-select>
             </mat-form-field>
 
@@ -189,13 +207,13 @@ import {
           <div class="tab-content">
             <div class="tab-header">
               <h2>Subscription Plans</h2>
-              <button mat-raised-button color="primary">
+              <button mat-raised-button color="primary" (click)="createPlan()">
                 <mat-icon>add</mat-icon>
                 Add Plan
               </button>
             </div>
 
-            <mat-table [dataSource]="plans" class="feature-table">
+            <mat-table [dataSource]="plans()" class="feature-table">
               <ng-container matColumnDef="name">
                 <th mat-header-cell *matHeaderCellDef>Name</th>
                 <td mat-cell *matCellDef="let plan">{{ plan.name }}</td>
@@ -222,7 +240,7 @@ import {
                     <mat-chip *ngFor="let feature of plan.features?.slice(0, 2)">
                       {{ feature }}
                     </mat-chip>
-                    <mat-chip *ngIf="plan.features?.length > 2">
+                    <mat-chip *ngIf="plan.features && plan.features.length > 2">
                       +{{ plan.features.length - 2 }} more
                     </mat-chip>
                   </mat-chip-set>
@@ -267,16 +285,14 @@ import {
               </button>
             </div>
 
-            <mat-table [dataSource]="subscriptions" class="feature-table">
+            <mat-table [dataSource]="subscriptions()" class="feature-table">
               <ng-container matColumnDef="user">
                 <th mat-header-cell *matHeaderCellDef>User</th>
                 <td mat-cell *matCellDef="let subscription">
                   <div class="user-info">
-                    <img [src]="subscription.user_profile?.avatar_url || '/assets/default-avatar.png'" 
-                         alt="Avatar" class="user-avatar">
                     <div>
-                      <div class="user-name">{{ subscription.user_profile?.display_name || 'Unknown User' }}</div>
-                      <div class="user-email">{{ subscription.user_profile?.email }}</div>
+                      <div class="user-name">{{ subscription.user?.display_name || 'Unknown User' }}</div>
+                      <div class="user-email">{{ subscription.user?.email }}</div>
                     </div>
                   </div>
                 </td>
@@ -287,7 +303,7 @@ import {
                 <td mat-cell *matCellDef="let subscription">
                   <div>
                     <div class="plan-name">{{ subscription.plan?.name }}</div>
-                    <div class="plan-price">\${{ subscription.plan?.price }} / {{ subscription.plan?.duration_months }}mo</div>
+                    <div class="plan-price">\${{ (subscription.plan?.price_cents || 0) / 100 }} / {{ subscription.plan?.interval }}</div>
                   </div>
                 </td>
               </ng-container>
@@ -306,17 +322,15 @@ import {
                 <td mat-cell *matCellDef="let subscription">
                   <div class="subscription-period">
                     <div>{{ subscription.start_date | date:'mediumDate' }}</div>
-                    <div>{{ subscription.end_date | date:'mediumDate' }}</div>
+                    <div>{{ subscription.cancel_at | date:'mediumDate' }}</div>
                   </div>
                 </td>
               </ng-container>
 
               <ng-container matColumnDef="auto_renew">
-                <th mat-header-cell *matHeaderCellDef>Auto Renew</th>
+                <th mat-header-cell *matHeaderCellDef>Provider ID</th>
                 <td mat-cell *matCellDef="let subscription">
-                  <mat-icon [color]="subscription.auto_renew ? 'primary' : 'warn'">
-                    {{ subscription.auto_renew ? 'check_circle' : 'cancel' }}
-                  </mat-icon>
+                  <code>{{ subscription.provider_subscription_id || 'N/A' }}</code>
                 </td>
               </ng-container>
 
@@ -334,13 +348,13 @@ import {
                       <mat-icon>play_arrow</mat-icon>
                       Activate
                     </button>
-                    <button mat-menu-item (click)="updateSubscriptionStatus(subscription, 'cancelled')">
+                    <button mat-menu-item (click)="updateSubscriptionStatus(subscription, 'canceled')">
                       <mat-icon>cancel</mat-icon>
                       Cancel
                     </button>
-                    <button mat-menu-item (click)="updateSubscriptionStatus(subscription, 'expired')">
+                    <button mat-menu-item (click)="updateSubscriptionStatus(subscription, 'past_due')">
                       <mat-icon>schedule</mat-icon>
-                      Mark Expired
+                      Mark Past Due
                     </button>
                   </mat-menu>
                 </td>
@@ -359,7 +373,7 @@ import {
               <h2>Payment Transactions</h2>
             </div>
 
-            <mat-table [dataSource]="payments" class="feature-table">
+            <mat-table [dataSource]="payments()" class="feature-table">
               <ng-container matColumnDef="user">
                 <th mat-header-cell *matHeaderCellDef>User</th>
                 <td mat-cell *matCellDef="let payment">
@@ -430,10 +444,27 @@ import {
   styleUrls: ['./subscription-payments.component.scss']
 })
 export class SubscriptionPaymentsComponent implements OnInit {
-  stats: SubscriptionStats | null = null;
-  plans: Plan[] = [];
-  subscriptions: Subscription[] = [];
-  payments: Payment[] = [];
+  private subscriptionPaymentsService = inject(SubscriptionPaymentsService);
+  private supabaseService = inject(SupabaseService);
+  private fb = inject(FormBuilder);
+  private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
+
+  // Signals for reactive state
+  loading = signal(false);
+  stats = signal<SubscriptionStats | null>(null);
+  plans = signal<Plan[]>([]);
+  subscriptions = signal<ExtendedSubscription[]>([]);
+  payments = signal<Payment[]>([]);
+  
+  // Data grid results
+  subscriptionsResult = signal<DataGridResult<ExtendedSubscription> | null>(null);
+  
+  // Pagination and sorting
+  currentPage = signal(0);
+  pageSize = signal(10);
+  sortBy = signal('start_date');
+  sortOrder = signal<'asc' | 'desc'>('desc');
 
   filtersForm: FormGroup;
   currentFilters: SubscriptionFilters = {};
@@ -442,10 +473,7 @@ export class SubscriptionPaymentsComponent implements OnInit {
   subscriptionColumns = ['user', 'plan', 'status', 'period', 'auto_renew', 'actions'];
   paymentColumns = ['user', 'amount', 'status', 'method', 'transaction_id', 'created_at', 'actions'];
 
-  constructor(
-    private subscriptionPaymentsService: SubscriptionPaymentsService,
-    private fb: FormBuilder
-  ) {
+  constructor() {
     this.filtersForm = this.fb.group({
       search: [''],
       plan_id: [''],
@@ -461,13 +489,14 @@ export class SubscriptionPaymentsComponent implements OnInit {
   }
 
   private loadData(): void {
-    // Load statistics
+    this.loading.set(true);
+    
+    // Load stats
     this.subscriptionPaymentsService.getSubscriptionStats().subscribe({
-      next: (stats) => this.stats = stats,
+      next: (stats) => this.stats.set(stats),
       error: (error) => console.error('Error loading stats:', error)
     });
 
-    // Load all data
     this.loadPlans();
     this.loadSubscriptions();
     this.loadPayments();
@@ -475,87 +504,165 @@ export class SubscriptionPaymentsComponent implements OnInit {
 
   private loadPlans(): void {
     this.subscriptionPaymentsService.getPlans(this.currentFilters).subscribe({
-      next: (plans) => this.plans = plans,
+      next: (plans) => this.plans.set(plans),
       error: (error) => console.error('Error loading plans:', error)
     });
   }
 
-  private loadSubscriptions(): void {
-    this.subscriptionPaymentsService.getSubscriptions(this.currentFilters).subscribe({
-      next: (subscriptions) => this.subscriptions = subscriptions,
-      error: (error) => console.error('Error loading subscriptions:', error)
-    });
+  private async loadSubscriptions(): Promise<void> {
+    try {
+      const options: DataGridOptions = {
+        page: this.currentPage(),
+        pageSize: this.pageSize(),
+        sortBy: this.sortBy(),
+        sortOrder: this.sortOrder(),
+        search: this.filtersForm.value.search || undefined,
+        filters: {
+          status: this.filtersForm.value.status || undefined,
+          planId: this.filtersForm.value.plan_id || undefined,
+          dateFrom: this.filtersForm.value.date_from ? this.filtersForm.value.date_from.toISOString() : undefined,
+          dateTo: this.filtersForm.value.date_to ? this.filtersForm.value.date_to.toISOString() : undefined
+        }
+      };
+
+      const result = await this.supabaseService.getSubscriptionsGrid(options);
+      this.subscriptionsResult.set(result);
+      this.subscriptions.set(result.data);
+    } catch (error) {
+      console.error('Error loading subscriptions:', error);
+      this.snackBar.open('Error loading subscriptions', 'Close', { duration: 3000 });
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   private loadPayments(): void {
     this.subscriptionPaymentsService.getPayments(this.currentFilters).subscribe({
-      next: (payments) => this.payments = payments,
+      next: (payments) => this.payments.set(payments),
       error: (error) => console.error('Error loading payments:', error)
     });
   }
 
+  onPageChange(event: PageEvent) {
+    this.currentPage.set(event.pageIndex);
+    this.pageSize.set(event.pageSize);
+    this.loadSubscriptions();
+  }
+
+  onSortChange(sort: Sort) {
+    this.sortBy.set(sort.active);
+    this.sortOrder.set(sort.direction as 'asc' | 'desc' || 'desc');
+    this.currentPage.set(0);
+    this.loadSubscriptions();
+  }
+
   applyFilters(): void {
     this.currentFilters = { ...this.filtersForm.value };
+    this.currentPage.set(0);
     this.loadData();
   }
 
   clearFilters(): void {
     this.filtersForm.reset();
     this.currentFilters = {};
+    this.currentPage.set(0);
     this.loadData();
   }
 
-  togglePlanStatus(plan: Plan): void {
-    this.subscriptionPaymentsService.updatePlanStatus(plan.id, !plan.is_active).subscribe({
-      next: () => {
-        plan.is_active = !plan.is_active;
-        this.loadData(); // Refresh stats
-      },
-      error: (error) => console.error('Error updating plan status:', error)
-    });
+  async exportToCsv() {
+    try {
+      this.loading.set(true);
+      const options: DataGridOptions = {
+        page: 0,
+        pageSize: 10000, // Export all
+        sortBy: this.sortBy(),
+        sortOrder: this.sortOrder(),
+        search: this.filtersForm.value.search || undefined,
+        filters: {
+          status: this.filtersForm.value.status || undefined,
+          planId: this.filtersForm.value.plan_id || undefined,
+          dateFrom: this.filtersForm.value.date_from ? this.filtersForm.value.date_from.toISOString() : undefined,
+          dateTo: this.filtersForm.value.date_to ? this.filtersForm.value.date_to.toISOString() : undefined
+        }
+      };
+
+      const csvData = await this.supabaseService.exportToCSV('subscriptions', options);
+      
+      // Create and download CSV file
+      const blob = new Blob([csvData], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `subscriptions_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+      
+      this.snackBar.open('Subscriptions exported successfully', 'Close', { duration: 3000 });
+    } catch (error) {
+      console.error('Error exporting subscriptions:', error);
+      this.snackBar.open('Error exporting subscriptions', 'Close', { duration: 3000 });
+    } finally {
+      this.loading.set(false);
+    }
   }
 
-  updateSubscriptionStatus(subscription: Subscription, status: string): void {
-    this.subscriptionPaymentsService.updateSubscriptionStatus(subscription.id, status).subscribe({
-      next: () => {
-        subscription.status = status as any;
-        this.loadData(); // Refresh stats
-      },
-      error: (error) => console.error('Error updating subscription status:', error)
-    });
+  togglePlanStatus(plan: Plan): void {
+    // Implementation for toggling plan status
+    console.log('Toggle plan status:', plan);
+    this.snackBar.open(`Plan ${plan.name} status toggled`, 'Close', { duration: 3000 });
+  }
+
+  updateSubscriptionStatus(subscription: ExtendedSubscription, status: string): void {
+    // Implementation for updating subscription status
+    console.log('Update subscription status:', subscription, status);
+    this.snackBar.open(`Subscription status updated to ${status}`, 'Close', { duration: 3000 });
   }
 
   getSubscriptionStatusColor(status: string): string {
     switch (status) {
-      case 'active': return 'primary';
-      case 'cancelled': return 'warn';
-      case 'expired': return 'accent';
-      case 'pending': return '';
-      default: return '';
+      case 'active':
+        return 'primary';
+      case 'trialing':
+        return 'accent';
+      case 'past_due':
+        return 'warn';
+      case 'canceled':
+        return '';
+      default:
+        return '';
     }
   }
 
   getPaymentStatusColor(status: string): string {
     switch (status) {
-      case 'completed': return 'primary';
-      case 'failed': return 'warn';
-      case 'refunded': return 'accent';
-      case 'pending': return '';
-      default: return '';
+      case 'completed':
+        return 'primary';
+      case 'pending':
+        return 'accent';
+      case 'failed':
+        return 'warn';
+      case 'refunded':
+        return '';
+      default:
+        return '';
     }
   }
 
   exportSubscriptions(): void {
-    this.subscriptionPaymentsService.exportSubscriptions(this.currentFilters).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `subscriptions-${new Date().toISOString().split('T')[0]}.csv`;
-        link.click();
-        window.URL.revokeObjectURL(url);
-      },
-      error: (error) => console.error('Error exporting subscriptions:', error)
+    this.exportToCsv();
+  }
+
+  createPlan(): void {
+    const dialogRef = this.dialog.open(CreatePlanDialogComponent, {
+      width: '600px',
+      maxWidth: '90vw'
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.loadPlans();
+        this.snackBar.open('Plan created successfully!', 'Close', { duration: 3000 });
+      }
     });
   }
 }

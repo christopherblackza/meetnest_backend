@@ -102,6 +102,51 @@ export class ContentModerationService {
     return !error;
   }
 
+  // Content Flags
+  getContentFlags(filters?: ModerationFilters): Observable<ContentFlag[]> {
+    return from(this.fetchContentFlags(filters));
+  }
+
+  private async fetchContentFlags(filters?: ModerationFilters): Promise<ContentFlag[]> {
+    let query = this.supabase.client
+      .from('content_flags')
+      .select(`
+        *,
+        user:user_id(full_name, display_name, avatar_url, email)
+      `);
+
+    if (filters?.status) {
+      query = query.eq('status', filters.status);
+    }
+    if (filters?.type) {
+      query = query.eq('flag_type', filters.type);
+    }
+    if (filters?.date_from) {
+      query = query.gte('created_at', filters.date_from);
+    }
+    if (filters?.date_to) {
+      query = query.lte('created_at', filters.date_to);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data || [];
+  }
+
+  updateFlagStatus(flagId: string, status: string): Observable<boolean> {
+    return from(this.updateFlag(flagId, status));
+  }
+
+  private async updateFlag(flagId: string, status: string): Promise<boolean> {
+    const { error } = await this.supabase.client
+      .from('content_flags')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', flagId);
+    
+    return !error;
+  }
+
   // Statistics
   getModerationStats(): Observable<ModerationStats> {
     return from(this.fetchModerationStats());

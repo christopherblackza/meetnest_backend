@@ -11,7 +11,7 @@
             <div class="stat-content">
               <mat-icon>location_city</mat-icon>
               <div>
-                <h3>{{ stats.total_cities }}</h3>
+                <h3>{{ stats()?.total_cities }}</h3>
                 <p>Total Cities</p>
               </div>
             </div>
@@ -23,7 +23,7 @@
             <div class="stat-content">
               <mat-icon>flight</mat-icon>
               <div>
-                <h3>{{ stats.total_trips }}</h3>
+                <h3>{{ stats()?.total_trips }}</h3>
                 <p>Future Trips</p>
               </div>
             </div>
@@ -35,7 +35,7 @@
             <div class="stat-content">
               <mat-icon>group</mat-icon>
               <div>
-                <h3>{{ stats.active_meetups }}</h3>
+                <h3>{{ stats()?.active_meetups }}</h3>
                 <p>Active Meetups</p>
               </div>
             </div>
@@ -47,7 +47,7 @@
             <div class="stat-content">
               <mat-icon>event</mat-icon>
               <div>
-                <h3>{{ stats.upcoming_events }}</h3>
+                <h3>{{ stats()?.upcoming_events }}</h3>
                 <p>Upcoming Events</p>
               </div>
             </div>
@@ -59,7 +59,7 @@
             <div class="stat-content">
               <mat-icon>chat</mat-icon>
               <div>
-                <h3>{{ stats.total_chats }}</h3>
+                <h3>{{ stats()?.total_chats }}</h3>
                 <p>Total Chats</p>
               </div>
             </div>
@@ -81,7 +81,7 @@
               <mat-label>City</mat-label>
               <mat-select formControlName="city_id">
                 <mat-option value="">All Cities</mat-option>
-                <mat-option *ngFor="let city of cities" [value]="city.id">
+                <mat-option *ngFor="let city of cities(); trackBy: trackByCity" [value]="city.id">
                   {{ city.name }}, {{ city.country }}
                 </mat-option>
               </mat-select>
@@ -127,7 +127,7 @@
               </button>
             </div>
 
-            <mat-table [dataSource]="cities" class="feature-table">
+            <mat-table [dataSource]="cities()" class="feature-table">
               <ng-container matColumnDef="name">
                 <th mat-header-cell *matHeaderCellDef>Name</th>
                 <td mat-cell *matCellDef="let city">{{ city.name }}</td>
@@ -173,7 +173,7 @@
               <h2>Future Trips</h2>
             </div>
 
-            <mat-table [dataSource]="futureTrips" class="feature-table">
+            <mat-table [dataSource]="futureTrips()" class="feature-table">
               <ng-container matColumnDef="user">
                 <th mat-header-cell *matHeaderCellDef>User</th>
                 <td mat-cell *matCellDef="let trip">
@@ -226,7 +226,7 @@
               <h2>Meetups Management</h2>
             </div>
 
-            <mat-table [dataSource]="meetups" class="feature-table">
+            <mat-table [dataSource]="meetups()" class="feature-table">
               <ng-container matColumnDef="title">
                 <th mat-header-cell *matHeaderCellDef>Title</th>
                 <td mat-cell *matCellDef="let meetup">{{ meetup.title }}</td>
@@ -287,7 +287,7 @@
               <h2>Events Management</h2>
             </div>
 
-            <mat-table [dataSource]="events" class="feature-table">
+            <mat-table [dataSource]="events()" class="feature-table">
               <ng-container matColumnDef="title">
                 <th mat-header-cell *matHeaderCellDef>Title</th>
                 <td mat-cell *matCellDef="let event">{{ event.title }}</td>
@@ -355,7 +355,7 @@
               <h2>Chats Management</h2>
             </div>
 
-            <mat-table [dataSource]="chats" class="feature-table">
+            <mat-table [dataSource]="chats()" class="feature-table">
               <ng-container matColumnDef="name">
                 <th mat-header-cell *matHeaderCellDef>Name</th>
                 <td mat-cell *matCellDef="let chat">

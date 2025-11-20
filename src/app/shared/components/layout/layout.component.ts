@@ -36,6 +36,26 @@ import { SupabaseService } from '../../../core/services/supabase.service';
             <span matListItemTitle>Dashboard</span>
           </a>
           
+          <a mat-list-item routerLink="/events" routerLinkActive="active">
+            <mat-icon matListItemIcon>event</mat-icon>
+            <span matListItemTitle>Events</span>
+          </a>
+          
+          <a mat-list-item routerLink="/meetups" routerLinkActive="active">
+            <mat-icon matListItemIcon>group</mat-icon>
+            <span matListItemTitle>Meetups</span>
+          </a>
+          
+          <a mat-list-item routerLink="/messaging" routerLinkActive="active">
+            <mat-icon matListItemIcon>chat</mat-icon>
+            <span matListItemTitle>Messaging</span>
+          </a>
+          
+          <a mat-list-item routerLink="/catalog" routerLinkActive="active">
+            <mat-icon matListItemIcon>category</mat-icon>
+            <span matListItemTitle>Catalog</span>
+          </a>
+          
           <a mat-list-item routerLink="/users" routerLinkActive="active">
             <mat-icon matListItemIcon>people</mat-icon>
             <span matListItemTitle>User Management</span>

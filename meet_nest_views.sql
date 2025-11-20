@@ -8,7 +8,6 @@ SELECT
     COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '7 days' THEN 1 END) as new_users_this_week,
     COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as new_users_this_month,
     COUNT(CASE WHEN status = 'active' THEN 1 END) as active_users,
-    COUNT(CASE WHEN is_verified = true THEN 1 END) as verified_users,
     ROUND(
         (
             COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END)::numeric /
@@ -139,12 +138,13 @@ ORDER BY uc.cohort_month;
 -- Geographic Analytics
 CREATE OR REPLACE VIEW geographic_analytics AS
 SELECT 
-    country_of_origin,
+    current_country,
+    current_city,
     COUNT(*) as user_count,
     COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as new_users_this_month
 FROM user_profiles 
-WHERE country_of_origin IS NOT NULL
-GROUP BY country_of_origin
+WHERE current_country IS NOT NULL
+GROUP BY current_country, current_city
 ORDER BY user_count DESC
 LIMIT 50;
 
@@ -168,14 +168,17 @@ LIMIT 20;
 -- Moderation Analytics
 CREATE OR REPLACE VIEW moderation_analytics AS
 SELECT 
-    COUNT(*) as total_reports,
-    COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_reports,
-    COUNT(CASE WHEN status = 'reviewed' THEN 1 END) as reviewed_reports,
-    COUNT(CASE WHEN status = 'action_taken' THEN 1 END) as action_taken_reports,
-    COUNT(CASE WHEN created_at >= CURRENT_DATE THEN 1 END) as reports_today,
-    COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '7 days' THEN 1 END) as reports_this_week,
+    COUNT(*) AS total_reports,
+    COUNT(CASE WHEN status = 'pending' THEN 1 END) AS pending_reports,
+    COUNT(CASE WHEN status = 'reviewed' THEN 1 END) AS reviewed_reports,
+    COUNT(CASE WHEN status = 'action_taken' THEN 1 END) AS action_taken_reports,
+    COUNT(CASE WHEN created_at >= CURRENT_DATE THEN 1 END) AS reports_today,
+    COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '7 days' THEN 1 END) AS reports_this_week,
     ROUND(
-        COUNT(CASE WHEN status = 'action_taken' THEN 1 END)::float / 
-        NULLIF(COUNT(CASE WHEN status != 'pending' THEN 1 END), 0) * 100, 2
-    ) as action_rate
+        (
+            COUNT(CASE WHEN status = 'action_taken' THEN 1 END)::numeric /
+            NULLIF(COUNT(CASE WHEN status != 'pending' THEN 1 END), 0)
+        ) * 100,
+        2
+    ) AS action_rate
 FROM user_reports;

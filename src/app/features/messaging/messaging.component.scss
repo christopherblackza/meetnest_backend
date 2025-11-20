@@ -1,0 +1,258 @@
+.messaging-container {
+      padding: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 2rem;
+      font-weight: 500;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      padding: 0;
+    }
+
+    .stat-content {
+      display: flex;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .stat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      margin-right: 20px;
+    }
+
+    .stat-icon.total { color: #2196f3; }
+    .stat-icon.reported { color: #ff9800; }
+    .stat-icon.flagged { color: #f44336; }
+    .stat-icon.today { color: #4caf50; }
+
+    .stat-info h3 {
+      margin: 0;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .stat-number {
+      margin: 5px 0 0 0;
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .filters-card {
+      margin-bottom: 24px;
+    }
+
+    .filters-form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      align-items: start;
+    }
+
+    .filter-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .table-card {
+      overflow: hidden;
+    }
+
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .table-header h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 500;
+    }
+
+    .table-container {
+      position: relative;
+      min-height: 400px;
+    }
+
+    .table-container.loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .table-container.loading table {
+      opacity: 0.5;
+    }
+
+    .messages-table {
+      width: 100%;
+    }
+
+    .message-content {
+      line-height: 1.4;
+    }
+
+    .message-text {
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+
+    .message-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .reports-count {
+      font-size: 0.75rem;
+      color: #f44336;
+      font-weight: 500;
+    }
+
+    .sender-info {
+      line-height: 1.4;
+    }
+
+    .sender-email {
+      font-size: 0.875rem;
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    .chat-info {
+      line-height: 1.4;
+    }
+
+    .chat-title {
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .participant-count {
+      font-size: 0.75rem;
+      color: rgba(0, 0, 0, 0.6);
+      margin-top: 4px;
+    }
+
+    .timestamp-info {
+      line-height: 1.4;
+    }
+
+    .time {
+      font-size: 0.875rem;
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    .reports-info {
+      display: flex;
+      justify-content: center;
+    }
+
+    /* Message Type Chips */
+    .text-chip {
+      background-color: #e3f2fd;
+      color: #1976d2;
+    }
+
+    .image-chip {
+      background-color: #f3e5f5;
+      color: #7b1fa2;
+    }
+
+    .location-chip {
+      background-color: #e8f5e8;
+      color: #2e7d32;
+    }
+
+    /* Chat Type Chips */
+    .event-chip {
+      background-color: #fff3e0;
+      color: #f57c00;
+    }
+
+    .meetup-chip {
+      background-color: #fce4ec;
+      color: #c2185b;
+    }
+
+    .direct-chip {
+      background-color: #e0f2f1;
+      color: #00695c;
+    }
+
+    /* Report Chips */
+    .reported-chip {
+      background-color: #ffebee;
+      color: #c62828;
+    }
+
+    .clean-chip {
+      background-color: #e8f5e8;
+      color: #2e7d32;
+    }
+
+    .delete-action {
+      color: #f44336;
+    }
+
+    mat-spinner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+    }
+
+    @media (max-width: 768px) {
+      .messaging-container {
+        padding: 16px;
+      }
+
+      .header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: stretch;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .filters-form {
+        grid-template-columns: 1fr;
+      }
+
+      .table-header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: stretch;
+      }
+    }

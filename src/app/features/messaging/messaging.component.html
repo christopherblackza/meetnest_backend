@@ -1,0 +1,253 @@
+  <div class="messaging-container">
+      <!-- Header -->
+      <div class="header">
+        <h1>Messaging Oversight</h1>
+        <div class="header-actions">
+          <button mat-raised-button (click)="exportToCsv()" [disabled]="loading()">
+            <mat-icon>download</mat-icon>
+            Export CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="stats-grid">
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-content">
+              <mat-icon class="stat-icon total">chat</mat-icon>
+              <div class="stat-info">
+                <h3>Total Messages</h3>
+                <p class="stat-number">{{ dataResult()?.count || 0 }}</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-content">
+              <mat-icon class="stat-icon reported">report</mat-icon>
+              <div class="stat-info">
+                <h3>Reported Messages</h3>
+                <p class="stat-number">{{ reportedMessages() }}</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-content">
+              <mat-icon class="stat-icon flagged">flag</mat-icon>
+              <div class="stat-info">
+                <h3>Flagged Messages</h3>
+                <p class="stat-number">{{ flaggedMessages() }}</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-content">
+              <mat-icon class="stat-icon today">today</mat-icon>
+              <div class="stat-info">
+                <h3>Today's Messages</h3>
+                <p class="stat-number">{{ todayMessages() }}</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <!-- Filters -->
+      <mat-card class="filters-card">
+        <mat-card-content>
+          <form [formGroup]="filtersForm" class="filters-form">
+            <mat-form-field appearance="outline">
+              <mat-label>Search</mat-label>
+              <input matInput formControlName="search" placeholder="Search messages...">
+              <mat-icon matSuffix>search</mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Status</mat-label>
+              <mat-select formControlName="status">
+                <mat-option value="">All</mat-option>
+                <mat-option value="active">Active</mat-option>
+                <mat-option value="flagged">Flagged</mat-option>
+                <mat-option value="deleted">Deleted</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Message Type</mat-label>
+              <mat-select formControlName="messageType">
+                <mat-option value="">All</mat-option>
+                <mat-option value="text">Text</mat-option>
+                <mat-option value="image">Image</mat-option>
+                <mat-option value="location">Location</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Chat Type</mat-label>
+              <mat-select formControlName="chatType">
+                <mat-option value="">All</mat-option>
+                <mat-option value="event">Event</mat-option>
+                <mat-option value="meetup">Meetup</mat-option>
+                <mat-option value="direct">Direct</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Date From</mat-label>
+              <input matInput [matDatepicker]="startPicker" formControlName="startDate">
+              <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+              <mat-datepicker #startPicker></mat-datepicker>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Date To</mat-label>
+              <input matInput [matDatepicker]="endPicker" formControlName="endDate">
+              <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+              <mat-datepicker #endPicker></mat-datepicker>
+            </mat-form-field>
+
+            <div class="filter-actions">
+              <button mat-button (click)="clearFilters()">Clear</button>
+              <button mat-raised-button color="primary" (click)="applyFilters()">Apply</button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Data Table -->
+      <mat-card class="table-card">
+        <mat-card-content>
+          <div class="table-header">
+            <h2>Messages ({{ dataResult()?.count || 0 }})</h2>
+          </div>
+
+          <div class="table-container" [class.loading]="loading()">
+            <mat-spinner *ngIf="loading()" diameter="40"></mat-spinner>
+            
+            <table mat-table [dataSource]="messages()" matSort (matSortChange)="onSortChange($event)" class="messages-table">
+              <!-- Content Column -->
+              <ng-container matColumnDef="content">
+                <th mat-header-cell *matHeaderCellDef>Content</th>
+                <td mat-cell *matCellDef="let message">
+                  <div class="message-content">
+                    <div class="message-text">
+                      {{ message.content | slice:0:100 }}{{ message.content?.length > 100 ? '...' : '' }}
+                    </div>
+                    <div class="message-meta">
+                      <mat-chip [class]="getMessageTypeClass(message.message_type)">
+                        {{ message.message_type }}
+                      </mat-chip>
+                      <span *ngIf="message.reports_count > 0" class="reports-count">
+                        {{ message.reports_count }} reports
+                      </span>
+                    </div>
+                  </div>
+                </td>
+              </ng-container>
+
+              <!-- Sender Column -->
+              <ng-container matColumnDef="sender">
+                <th mat-header-cell *matHeaderCellDef>Sender</th>
+                <td mat-cell *matCellDef="let message">
+                  <div class="sender-info">
+                    <div>{{ message.sender_profile?.display_name || 'Unknown' }}</div>
+                    <div class="sender-email">{{ message.sender_profile?.email || '' }}</div>
+                  </div>
+                </td>
+              </ng-container>
+
+              <!-- Chat Info Column -->
+              <ng-container matColumnDef="chatInfo">
+                <th mat-header-cell *matHeaderCellDef>Chat Info</th>
+                <td mat-cell *matCellDef="let message">
+                  <div class="chat-info">
+                    <div class="chat-title">{{ message.chat_info?.name || 'Direct Message' }}</div>
+                    <mat-chip [class]="getChatTypeClass(message.chat_info?.type)">
+                      {{ message.chat_info?.type || 'direct' }}
+                    </mat-chip>
+                  </div>
+                </td>
+              </ng-container>
+
+              <!-- Timestamp Column -->
+              <ng-container matColumnDef="timestamp">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header="created_at">Timestamp</th>
+                <td mat-cell *matCellDef="let message">
+                  <div class="timestamp-info">
+                    <div>{{ message.created_at | date:'MMM d, y' }}</div>
+                    <div class="time">{{ message.created_at | date:'h:mm a' }}</div>
+                  </div>
+                </td>
+              </ng-container>
+
+              <!-- Reports Column -->
+              <ng-container matColumnDef="reports">
+                <th mat-header-cell *matHeaderCellDef>Reports</th>
+                <td mat-cell *matCellDef="let message">
+                  <div class="reports-info">
+                    <mat-chip [class]="message.reports_count > 0 ? 'reported-chip' : 'clean-chip'">
+                      {{ message.reports_count || 0 }}
+                    </mat-chip>
+                  </div>
+                </td>
+              </ng-container>
+
+              <!-- Actions Column -->
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef>Actions</th>
+                <td mat-cell *matCellDef="let message">
+                  <button mat-icon-button [matMenuTriggerFor]="actionMenu">
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                  <mat-menu #actionMenu="matMenu">
+                    <button mat-menu-item (click)="viewMessage(message)">
+                      <mat-icon>visibility</mat-icon>
+                      View Details
+                    </button>
+                    <button mat-menu-item (click)="approveMessage(message)" *ngIf="message.reports_count > 0">
+                      <mat-icon>check</mat-icon>
+                      Approve
+                    </button>
+                    <button mat-menu-item (click)="flagMessage(message)">
+                      <mat-icon>flag</mat-icon>
+                      Flag Message
+                    </button>
+                    <button mat-menu-item (click)="warnUser(message)">
+                      <mat-icon>warning</mat-icon>
+                      Warn User
+                    </button>
+                    <mat-divider></mat-divider>
+                    <button mat-menu-item (click)="deleteMessage(message)" class="delete-action">
+                      <mat-icon>delete</mat-icon>
+                      Delete
+                    </button>
+                  </mat-menu>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+            </table>
+          </div>
+
+          <!-- Paginator -->
+          <mat-paginator 
+            [length]="dataResult()?.count || 0"
+            [pageSize]="pageSize()"
+            [pageSizeOptions]="[10, 25, 50, 100]"
+            [pageIndex]="currentPage()"
+            (page)="onPageChange($event)"
+            showFirstLastButtons>
+          </mat-paginator>
+        </mat-card-content>
+      </mat-card>
+    </div>

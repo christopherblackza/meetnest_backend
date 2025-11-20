@@ -82,19 +82,19 @@ export class AnalyticsComponent implements OnInit {
     Promise.all([
       this.analyticsService.getAnalyticsOverview(filters).toPromise(),
       this.analyticsService.getUserAnalytics(filters).toPromise(),
-      // this.analyticsService.getRevenueAnalytics(filters).toPromise(),
-      // this.analyticsService.getContentAnalytics(filters).toPromise()
-    ]).then(([overview, userAnalytics]) => {
+      this.analyticsService.getRevenueAnalytics(filters).toPromise(),
+      this.analyticsService.getContentAnalytics(filters).toPromise()
+    ]).then(([overview, userAnalytics, revenueAnalytics, contentAnalytics]) => {
       this.overview = overview || null;
       this.userAnalytics = userAnalytics || null;
-      console.error('User analytics:', this.userAnalytics);
-      // this.revenueAnalytics = revenueAnalytics || null;
-      // this.contentAnalytics = contentAnalytics || null;
+      this.revenueAnalytics = revenueAnalytics || null;
+      this.contentAnalytics = contentAnalytics || null;
       
       this.updateCharts();
       this.loading = false;
     }).catch(error => {
       console.error('Error loading analytics:', error);
+      this.showErrorMessage('Failed to load analytics data. Please try again later.');
       this.loading = false;
     });
   }
@@ -227,5 +227,10 @@ export class AnalyticsComponent implements OnInit {
 
   refreshData() {
     this.loadAnalytics();
+  }
+
+  private showErrorMessage(message: string) {
+    // For now, just log to console. In a real app, you'd use a toast/snackbar service
+    console.warn('User message:', message);
   }
 }
