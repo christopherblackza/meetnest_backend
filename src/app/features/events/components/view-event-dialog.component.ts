@@ -56,7 +56,7 @@ interface EventDetails extends EventWithDetails {
               
               <div class="info-item">
                 <strong>Creator:</strong>
-                <p>{{ event.creator?.display_name }} ({{ event.creator?.email }})</p>
+                <p>{{ event.creator.display_name }} ({{ event.creator.email }})</p>
               </div>
               
               <div class="info-item">
@@ -67,7 +67,7 @@ interface EventDetails extends EventWithDetails {
               
               <div class="info-item">
                 <strong>Location:</strong>
-                <p>{{ event.latitude?.toFixed(6) }}, {{ event.longitude?.toFixed(6) }}</p>
+                <p>{{ event.latitude.toFixed(6) }}, {{ event.longitude.toFixed(6) }}</p>
                 <button mat-stroked-button (click)="openInMaps()">
                   <mat-icon>map</mat-icon>
                   View on Map

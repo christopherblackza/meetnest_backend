@@ -42,6 +42,11 @@ export const routes: Routes = [
         canActivate: [AdminGuard]
       },
       {
+        path: 'clients',
+        loadChildren: () => import('./features/clients/clients.routes').then(m => m.CLIENTS_ROUTES),
+        canActivate: [AdminGuard]
+      },
+      {
         path: 'users',
         loadChildren: () => import('./features/user-management/user-management.routes').then(m => m.routes),
         canActivate: [ModeratorGuard]

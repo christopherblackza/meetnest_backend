@@ -1,0 +1,234 @@
+<div class="client-edit-container">
+  <div class="loading-container" *ngIf="isLoading()">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Loading client details...</p>
+  </div>
+
+  <div class="client-edit-card" *ngIf="!isLoading()">
+    <div class="client-edit-header">
+      <h1>{{ editingId() ? 'Edit Client' : 'Add New Client' }}</h1>
+      <p>Fill out the form below to {{ editingId() ? "update the client\'s details" : 'add a new client' }}.</p>
+    </div>
+
+    <form (ngSubmit)="saveClient()" [formGroup]="clientForm" class="client-form">
+      <!-- Logo Section -->
+      <div class="logo-section">
+        <div class="logo-container">
+          <div class="logo-preview" *ngIf="logoUrl()">
+            <img [src]="logoUrl()" alt="Client Logo">
+          </div>
+          <div class="logo-placeholder" *ngIf="!logoUrl()">
+            <mat-icon>business</mat-icon>
+          </div>
+        </div>
+        <div class="logo-actions">
+          <div class="upload-controls" *ngIf="editingId()">
+            <input 
+              #logoInput
+              type="file" 
+              accept="image/jpeg,image/png,image/webp" 
+              style="display: none"
+              (change)="onLogoSelected($event)"
+            >
+            
+            <button 
+              *ngIf="!selectedLogoFile"
+              type="button" 
+              mat-stroked-button 
+              (click)="logoInput.click()"
+              [disabled]="isUploadingLogo()"
+            >
+              <mat-icon>upload</mat-icon>
+              {{ logoUrl() ? 'Change Logo' : 'Select Logo' }}
+            </button>
+
+            <div *ngIf="selectedLogoFile" class="pending-upload-actions">
+              <button 
+                type="button" 
+                mat-flat-button 
+                color="primary"
+                (click)="uploadLogo()"
+                [disabled]="isUploadingLogo()"
+              >
+                <mat-icon>cloud_upload</mat-icon>
+                {{ isUploadingLogo() ? 'Uploading...' : 'Upload' }}
+              </button>
+              
+              <button 
+                type="button" 
+                mat-stroked-button 
+                color="warn"
+                (click)="cancelLogoUpload()"
+                [disabled]="isUploadingLogo()"
+              >
+                <mat-icon>close</mat-icon>
+                Cancel
+              </button>
+            </div>
+
+            <p class="hint" *ngIf="!selectedLogoFile">Max 5MB. JPG, PNG, WEBP.</p>
+          </div>
+          <div class="info-message-inline" *ngIf="!editingId()">
+            <span>Save client to upload logo</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <mat-form-field>
+          <mat-label>Name</mat-label>
+          <input matInput formControlName="name" />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Type</mat-label>
+          <mat-select formControlName="type">
+            <mat-option *ngFor="let type of clientTypes" [value]="type">
+              {{ type }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <div class="form-row">
+        <mat-form-field>
+          <mat-label>Description</mat-label>
+          <textarea matInput formControlName="description"></textarea>
+        </mat-form-field>
+      </div>
+
+      <div class="form-row">
+        <mat-form-field>
+          <mat-label>Address</mat-label>
+          <input matInput formControlName="address" />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Contact Number</mat-label>
+          <input matInput formControlName="contact_number" />
+        </mat-form-field>
+      </div>
+
+      <div class="location-fields">
+        <div class="location-inputs">
+          <mat-form-field appearance="outline" class="location-field">
+            <mat-label>Latitude</mat-label>
+            <input matInput formControlName="latitude" required readonly />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="location-field">
+            <mat-label>Longitude</mat-label>
+            <input matInput formControlName="longitude" required readonly />
+          </mat-form-field>
+        </div>
+        <button
+          type="button"
+          mat-stroked-button
+          color="primary"
+          (click)="showMapSelector.set(true)"
+          class="map-select-btn"
+        >
+          <mat-icon>map</mat-icon>
+          Select on Map
+        </button>
+      </div>
+
+      <div class="form-row">
+        <mat-form-field>
+          <mat-label>Email</mat-label>
+          <input matInput formControlName="email" />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Website</mat-label>
+          <input matInput formControlName="website" />
+        </mat-form-field>
+      </div>
+
+      <div class="form-row">
+        <mat-form-field>
+          <mat-label>Instagram</mat-label>
+          <input matInput formControlName="instagram" />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Google Maps Link</mat-label>
+          <input matInput formControlName="google_maps_link" />
+        </mat-form-field>
+      </div>
+
+      <div class="form-row">
+        <mat-form-field>
+          <mat-label>Rating</mat-label>
+          <input matInput formControlName="rating" type="number" />
+        </mat-form-field>
+      </div>
+
+      <!-- Image Upload Section -->
+      <div class="images-section" *ngIf="editingId()">
+        <h3>Client Images ({{ clientImages().length }}/10)</h3>
+        
+        <div class="image-grid" *ngIf="clientImages().length > 0">
+          <div class="image-item" *ngFor="let img of clientImages()">
+            <img [src]="img" alt="Client Image">
+            <button type="button" mat-icon-button color="warn" (click)="removeImage(img)" class="remove-btn">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </div>
+
+        <div class="upload-controls">
+          <input 
+            #fileInput
+            type="file" 
+            multiple 
+            accept="image/jpeg,image/png,image/webp" 
+            style="display: none"
+            (change)="onFileSelected($event)"
+          >
+          <button 
+            type="button" 
+            mat-stroked-button 
+            (click)="fileInput.click()"
+            [disabled]="isUploading() || clientImages().length >= 10"
+          >
+            <mat-icon>cloud_upload</mat-icon>
+            {{ isUploading() ? 'Uploading...' : 'Upload Images' }}
+          </button>
+          <p class="hint">Max 10 images. Max 5MB each. Formats: JPG, PNG, WEBP.</p>
+        </div>
+      </div>
+      
+      <div class="info-message" *ngIf="!editingId()">
+        <mat-icon>info</mat-icon>
+        <span>Save the client first to enable image uploads.</span>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" mat-stroked-button (click)="cancel()">
+          Cancel
+        </button>
+        <button
+          type="submit"
+          mat-flat-button
+          color="primary"
+          [disabled]="clientForm.invalid || isSaving()"
+        >
+          {{
+            isSaving()
+              ? "Saving..."
+              : editingId()
+              ? "Update Client"
+              : "Create Client"
+          }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="map-modal-backdrop" *ngIf="showMapSelector()">
+  <div class="map-modal-container">
+    <app-map-selector 
+      [initialLat]="clientForm.get('latitude')?.value || 51.505" 
+      [initialLng]="clientForm.get('longitude')?.value || -0.09"
+      (locationSelected)="onLocationSelected($event)" 
+      (close)="showMapSelector.set(false)">
+    </app-map-selector>
+  </div>
+</div>

@@ -28,9 +28,9 @@ export class ModeratorGuard implements CanActivate {
         
         // Get user profile to check role
         return new Observable<boolean>(observer => {
-          this.supabaseService.getUserProfile(user.id, user.id).then((profile: UserProfile) => {
-            console.error('User profile:', profile);
-            if (profile && (profile.role === 'moderator' || profile.role === 'admin')) {
+          this.supabaseService.getUserRole(user.id).then((response) => {
+            console.error('User role:', response.role);
+            if (response && (response.role === 'moderator' || response.role === 'admin')) {
               observer.next(true);
             } else {
               this.router.navigate(['/unauthorized']);

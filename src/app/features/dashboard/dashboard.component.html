@@ -1,7 +1,7 @@
   <div class="dashboard-container">
       <!-- Header with Date Range Filter -->
       <div class="dashboard-header">
-        <h1>MeetNest Admin Dashboard</h1>
+        <h1>Meetro Admin</h1>
         <div class="date-filters">
           <mat-form-field appearance="outline">
             <mat-label>Date Range</mat-label>
@@ -41,7 +41,7 @@
         </div>
       } @else {
         <!-- KPI Cards Grid -->
-        <mat-grid-list cols="4" rowHeight="200px" gutterSize="16px" class="kpi-grid">
+        <mat-grid-list cols="3" rowHeight="200px" gutterSize="16px" class="kpi-grid">
           @for (kpi of kpiCards(); track kpi.title) {
             <mat-grid-tile>
               <mat-card class="kpi-card" [class]="'kpi-' + kpi.color" (click)="navigateToModule(kpi.route)">
@@ -64,7 +64,7 @@
         </mat-grid-list>
 
         <!-- Charts Section - Temporarily disabled due to missing NgChartsModule -->
-        <div class="charts-section">
+        <!-- <div class="charts-section">
           <mat-card class="chart-placeholder">
             <mat-card-header>
               <mat-card-title>Charts Coming Soon</mat-card-title>
@@ -74,10 +74,10 @@
               <p>Analytics charts will be displayed here once the charting library is installed and configured.</p>
             </mat-card-content>
           </mat-card>
-        </div>
+        </div> -->
 
         <!-- Quick Actions -->
-        <mat-card class="quick-actions-card">
+        <!-- <mat-card class="quick-actions-card">
           <mat-card-header>
             <mat-card-title>Quick Actions</mat-card-title>
           </mat-card-header>
@@ -109,6 +109,6 @@
               </button>
             </div>
           </mat-card-content>
-        </mat-card>
+        </mat-card> -->
       }
     </div>

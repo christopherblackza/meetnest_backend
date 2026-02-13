@@ -1,0 +1,36 @@
+<div class="map-container">
+  <div class="header">
+    <h3>Select Location</h3>
+    <div class="search-box">
+      <input 
+        type="text" 
+        placeholder="Search place..." 
+        [value]="searchQuery" 
+        (input)="onSearchInput($event)"
+        class="search-input"
+      >
+      <button class="search-btn" (click)="searchPlaces()">
+        <mat-icon>search</mat-icon>
+      </button>
+      <button class="locate-btn" (click)="getUserLocation()" title="Use my location">
+        <mat-icon>my_location</mat-icon>
+      </button>
+      <div class="search-results" *ngIf="searchResults.length > 0">
+        <div class="result-item" *ngFor="let result of searchResults" (click)="selectPlace(result)">
+          {{ result.display_name }}
+        </div>
+      </div>
+    </div>
+    <button (click)="close.emit()" class="close-button">&times;</button>
+  </div>
+  <div #map class="map-view"></div>
+  <div class="footer">
+    <div class="coordinates">
+      Lat: {{ currentLat | number:'1.4-4' }} | Lng: {{ currentLng | number:'1.4-4' }}
+    </div>
+    <div class="actions">
+      <button class="btn-cancel" (click)="close.emit()">Cancel</button>
+      <button class="btn-confirm" (click)="confirmLocation()">Confirm Location</button>
+    </div>
+  </div>
+</div>

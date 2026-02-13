@@ -1,7 +1,9 @@
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
 import { environment } from '../../../environments/environment';
-import { BehaviorSubject, Observable, from } from 'rxjs';
+import { BehaviorSubject, Observable, from, firstValueFrom } from 'rxjs';
+import { Client } from '../models/client.model';
 
 // Data Types from Technical Architecture
 export interface UserProfile {
@@ -141,19 +143,26 @@ export interface DataGridResult<T> {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class SupabaseService {
   private supabase: SupabaseClient;
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
-  constructor() {
-    this.supabase = createClient(environment.supabase.url, environment.supabase.anonKey);
-    
+  private sessionLoadedSubject = new BehaviorSubject<boolean>(false);
+  public sessionLoaded$ = this.sessionLoadedSubject.asObservable();
+
+  constructor(private http: HttpClient) {
+    this.supabase = createClient(
+      environment.supabase.url,
+      environment.supabase.anonKey,
+    );
+
     // Check for existing session
     this.supabase.auth.getSession().then(({ data: { session } }) => {
       this.currentUserSubject.next(session?.user ?? null);
+      this.sessionLoadedSubject.next(true);
     });
 
     // Listen for auth changes
@@ -172,11 +181,26 @@ export class SupabaseService {
 
   // Authentication Methods
   async signIn(email: string, password: string) {
-    const { data, error } = await this.supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    return { data, error };
+    try {
+      const data = await firstValueFrom(
+        this.http.post<any>(`${environment.nestApiUrl}/auth/signin`, {
+          email,
+          password,
+        }),
+      );
+
+      if (data.session) {
+        const { error } = await this.supabase.auth.setSession(data.session);
+        if (error) throw error;
+      }
+
+      return { data, error: null };
+    } catch (err: any) {
+      // Handle HTTP errors or other errors
+      const errorMessage =
+        err.error?.message || err.message || 'An error occurred during sign in';
+      return { data: null, error: { message: errorMessage } };
+    }
   }
 
   async signOut() {
@@ -185,28 +209,36 @@ export class SupabaseService {
   }
 
   async resetPassword(email: string) {
-    const { data, error } = await this.supabase.auth.resetPasswordForEmail(email);
+    const { data, error } =
+      await this.supabase.auth.resetPasswordForEmail(email);
     return { data, error };
   }
 
   // Analytics RPCs
-  async getAnalyticsOverview(dateRange: 'week' | 'month', startDate?: string, endDate?: string): Promise<AnalyticsOverview> {
+  async getAnalyticsOverview(
+    dateRange: 'week' | 'month',
+    startDate?: string,
+    endDate?: string,
+  ): Promise<AnalyticsOverview> {
     const { data, error } = await this.supabase.rpc('get_analytics_overview', {
       date_range: dateRange,
       start_date: startDate,
-      end_date: endDate
+      end_date: endDate,
     });
-    
+
     if (error) throw error;
     return data;
   }
 
-  async exportAnalyticsData(exportFormat: 'json' | 'csv', dataType: 'overview' | 'users' | 'revenue') {
+  async exportAnalyticsData(
+    exportFormat: 'json' | 'csv',
+    dataType: 'overview' | 'users' | 'revenue',
+  ) {
     const { data, error } = await this.supabase.rpc('export_analytics_data', {
       export_format: exportFormat,
-      data_type: dataType
+      data_type: dataType,
     });
-    
+
     if (error) throw error;
     return data;
   }
@@ -215,37 +247,55 @@ export class SupabaseService {
   async getUserProfile(uid: string, adminUid: string): Promise<UserProfile> {
     const { data, error } = await this.supabase.rpc('get_user_profile', {
       uid,
-      current_user_id: adminUid
+      current_user_id: adminUid,
     });
-    
+
     if (error) throw error;
     return data[0];
   }
 
-  async updateUserPreferences(userId: string, preferences: Partial<UserPreferences>) {
+  async getUserRole(
+    userId: string,
+  ): Promise<{ user_id: string; role: string }> {
+    return firstValueFrom(
+      this.http.get<{ user_id: string; role: string }>(
+        `${environment.nestApiUrl}/users/${userId}/role`,
+      ),
+    );
+  }
+
+  async updateUserPreferences(
+    userId: string,
+    preferences: Partial<UserPreferences>,
+  ) {
     const { data, error } = await this.supabase.rpc('update_user_preferences', {
       user_id: userId,
-      preferences
+      preferences,
     });
-    
+
     if (error) throw error;
     return data;
   }
 
   async getUserPreferences(userId: string): Promise<UserPreferences> {
     const { data, error } = await this.supabase.rpc('get_user_preferences', {
-      user_id: userId
+      user_id: userId,
     });
-    
+
     if (error) throw error;
     return data;
   }
 
-  async calculateUserTrustScore(userId: string): Promise<{ old_score: number; new_score: number }> {
-    const { data, error } = await this.supabase.rpc('calculate_user_trust_score', {
-      user_id: userId
-    });
-    
+  async calculateUserTrustScore(
+    userId: string,
+  ): Promise<{ old_score: number; new_score: number }> {
+    const { data, error } = await this.supabase.rpc(
+      'calculate_user_trust_score',
+      {
+        user_id: userId,
+      },
+    );
+
     if (error) throw error;
     return data;
   }
@@ -262,30 +312,39 @@ export class SupabaseService {
     is_public: boolean;
   }): Promise<Event> {
     const { data, error } = await this.supabase.rpc('create_event', eventData);
-    
+
     if (error) throw error;
     return data;
   }
 
-  async getEventDetails(eventId: string, adminUserId: string): Promise<Event & { attendees: UserProfile[] }> {
+  async getEventDetails(
+    eventId: string,
+    adminUserId: string,
+  ): Promise<Event & { attendees: UserProfile[] }> {
     const { data, error } = await this.supabase.rpc('get_event_details', {
       event_id: eventId,
-      admin_user_id: adminUserId
+      admin_user_id: adminUserId,
     });
-    
+
     if (error) throw error;
     return data;
   }
 
-  async getEventsInBounds(adminUid: string, minLat: number, maxLat: number, minLng: number, maxLng: number): Promise<Event[]> {
+  async getEventsInBounds(
+    adminUid: string,
+    minLat: number,
+    maxLat: number,
+    minLng: number,
+    maxLng: number,
+  ): Promise<Event[]> {
     const { data, error } = await this.supabase.rpc('get_events_in_bounds', {
       admin_uid: adminUid,
       min_lat: minLat,
       max_lat: maxLat,
       min_lng: minLng,
-      max_lng: maxLng
+      max_lng: maxLng,
     });
-    
+
     if (error) throw error;
     return data;
   }
@@ -301,39 +360,48 @@ export class SupabaseService {
     female_only: boolean;
     expires_at: string;
   }): Promise<Meetup> {
-    const { data, error } = await this.supabase.rpc('create_meetup', meetupData);
-    
+    const { data, error } = await this.supabase.rpc(
+      'create_meetup',
+      meetupData,
+    );
+
     if (error) throw error;
     return data;
   }
 
   async getUserActiveMeetups(userId: string): Promise<Meetup[]> {
     const { data, error } = await this.supabase.rpc('get_user_active_meetups', {
-      user_id: userId
+      user_id: userId,
     });
-    
+
     if (error) throw error;
     return data;
   }
 
   async getUserPastMeetups(userId: string): Promise<Meetup[]> {
     const { data, error } = await this.supabase.rpc('get_user_past_meetups', {
-      user_id: userId
+      user_id: userId,
     });
-    
+
     if (error) throw error;
     return data;
   }
 
-  async getMeetupsInBounds(adminUid: string, minLat: number, maxLat: number, minLng: number, maxLng: number): Promise<Meetup[]> {
+  async getMeetupsInBounds(
+    adminUid: string,
+    minLat: number,
+    maxLat: number,
+    minLng: number,
+    maxLng: number,
+  ): Promise<Meetup[]> {
     const { data, error } = await this.supabase.rpc('get_meetups_in_bounds', {
       admin_uid: adminUid,
       min_lat: minLat,
       max_lat: maxLat,
       min_lng: minLng,
-      max_lng: maxLng
+      max_lng: maxLng,
     });
-    
+
     if (error) throw error;
     return data;
   }
@@ -342,30 +410,38 @@ export class SupabaseService {
   async upgradeToProPlan(userId: string, planId: string) {
     const { data, error } = await this.supabase.rpc('upgrade_to_pro_plan', {
       user_id: userId,
-      plan_id: planId
+      plan_id: planId,
     });
-    
+
     if (error) throw error;
     return data;
   }
 
   async downgradeToFreePlan(userId: string) {
     const { data, error } = await this.supabase.rpc('downgrade_to_free_plan', {
-      user_id: userId
+      user_id: userId,
     });
-    
+
     if (error) throw error;
     return data;
   }
 
-  async recordSubscriptionPayment(subscriptionId: string, amountCents: number, currency: string, providerPaymentId: string) {
-    const { data, error } = await this.supabase.rpc('record_subscription_payment', {
-      subscription_id: subscriptionId,
-      amount_cents: amountCents,
-      currency,
-      provider_payment_id: providerPaymentId
-    });
-    
+  async recordSubscriptionPayment(
+    subscriptionId: string,
+    amountCents: number,
+    currency: string,
+    providerPaymentId: string,
+  ) {
+    const { data, error } = await this.supabase.rpc(
+      'record_subscription_payment',
+      {
+        subscription_id: subscriptionId,
+        amount_cents: amountCents,
+        currency,
+        provider_payment_id: providerPaymentId,
+      },
+    );
+
     if (error) throw error;
     return data;
   }
@@ -373,52 +449,67 @@ export class SupabaseService {
   async redeemPromoCode(code: string, userId: string) {
     const { data, error } = await this.supabase.rpc('redeem_promo_code', {
       code,
-      user_id: userId
+      user_id: userId,
     });
-    
+
     if (error) throw error;
     return data;
   }
 
   // Moderation RPCs
-  async getChatScreen(chatId: string, adminUserId: string): Promise<{ chat: any; messages: ChatMessage[] }> {
+  async getChatScreen(
+    chatId: string,
+    adminUserId: string,
+  ): Promise<{ chat: any; messages: ChatMessage[] }> {
     const { data, error } = await this.supabase.rpc('get_chat_screen', {
       chat_id: chatId,
-      admin_user_id: adminUserId
+      admin_user_id: adminUserId,
     });
-    
+
     if (error) throw error;
     return data;
   }
 
-  async createModerationAction(userId: string, actionType: 'warning' | 'suspension' | 'ban', reason: string, adminId: string): Promise<ModerationAction> {
-    const { data, error } = await this.supabase.rpc('create_moderation_action', {
-      user_id: userId,
-      action_type: actionType,
-      reason,
-      admin_id: adminId
-    });
-    
+  async createModerationAction(
+    userId: string,
+    actionType: 'warning' | 'suspension' | 'ban',
+    reason: string,
+    adminId: string,
+  ): Promise<ModerationAction> {
+    const { data, error } = await this.supabase.rpc(
+      'create_moderation_action',
+      {
+        user_id: userId,
+        action_type: actionType,
+        reason,
+        admin_id: adminId,
+      },
+    );
+
     if (error) throw error;
     return data;
   }
 
   async getCurrentUserId(): Promise<string | null> {
     const { data, error } = await this.supabase.auth.getUser();
-    
+
     if (error) throw error;
     return data?.user?.id || null;
   }
 
   // Enhanced Data Grid Methods with server-side pagination, filtering, and sorting
-  async getUserProfilesGrid(options: DataGridOptions): Promise<DataGridResult<UserProfile>> {
+  async getUserProfilesGrid(
+    options: DataGridOptions,
+  ): Promise<DataGridResult<UserProfile>> {
     let query = this.supabase
       .from('user_profiles')
       .select('*', { count: 'exact' });
 
     // Apply search
     if (options.search) {
-      query = query.or(`display_name.ilike.%${options.search}%,email.ilike.%${options.search}%`);
+      query = query.or(
+        `display_name.ilike.%${options.search}%,email.ilike.%${options.search}%`,
+      );
     }
 
     // Apply filters
@@ -452,7 +543,7 @@ export class SupabaseService {
     query = query.range(start, end);
 
     const { data, error, count } = await query;
-    
+
     if (error) throw error;
 
     return {
@@ -460,22 +551,132 @@ export class SupabaseService {
       count: count || 0,
       page: options.page,
       pageSize: options.pageSize,
-      totalPages: Math.ceil((count || 0) / options.pageSize)
+      totalPages: Math.ceil((count || 0) / options.pageSize),
     };
   }
 
-  async getEventsGrid(options: DataGridOptions): Promise<DataGridResult<Event & { creator: UserProfile; attendee_count: number }>> {
-    let query = this.supabase
-      .from('events')
-      .select(`
+  // Client Management Methods
+  private async getAuthHeaders(): Promise<Record<string, string>> {
+    const {
+      data: { session },
+    } = await this.supabase.auth.getSession();
+    const token = session?.access_token;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+  }
+
+  async getClients(): Promise<any[]> {
+    const headers = await this.getAuthHeaders();
+    return firstValueFrom(
+      this.http.get<any[]>(`${environment.nestApiUrl}/clients`, { headers }),
+    );
+  }
+
+  async getClientById(id: string): Promise<any> {
+    const headers = await this.getAuthHeaders();
+    return firstValueFrom(
+      this.http.get<any>(`${environment.nestApiUrl}/clients/${id}`, {
+        headers,
+      }),
+    );
+  }
+
+  async createClient(client: Omit<Client, 'id' | 'created_at'>): Promise<any> {
+    const headers = await this.getAuthHeaders();
+    return firstValueFrom(
+      this.http.post<any>(`${environment.nestApiUrl}/clients`, client, {
+        headers,
+      }),
+    );
+  }
+
+  async updateClient(id: string, client: Partial<Client>): Promise<any> {
+    const headers = await this.getAuthHeaders();
+    return firstValueFrom(
+      this.http.patch<any>(`${environment.nestApiUrl}/clients/${id}`, client, {
+        headers,
+      }),
+    );
+  }
+
+  async deleteClient(id: string): Promise<any> {
+    const headers = await this.getAuthHeaders();
+    return firstValueFrom(
+      this.http.delete<any>(`${environment.nestApiUrl}/clients/${id}`, {
+        headers,
+      }),
+    );
+  }
+
+  async uploadClientImages(clientId: string, files: File[]): Promise<string[]> {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('files', file));
+
+    const headers = await this.getAuthHeaders();
+
+    return firstValueFrom(
+      this.http.post<string[]>(
+        `${environment.nestApiUrl}/clients/${clientId}/images`,
+        formData,
+        { headers },
+      ),
+    );
+  }
+
+  async uploadClientLogo(clientId: string, file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers = await this.getAuthHeaders();
+
+    return firstValueFrom(
+      this.http.post(
+        `${environment.nestApiUrl}/clients/${clientId}/logo`,
+        formData,
+        {
+          headers,
+          responseType: 'text' as const,
+        },
+      ),
+    );
+  }
+
+  async removeClientImage(clientId: string, imageUrl: string): Promise<void> {
+    const headers = await this.getAuthHeaders();
+
+    return firstValueFrom(
+      this.http.delete<void>(
+        `${environment.nestApiUrl}/clients/${clientId}/images`,
+        {
+          body: { imageUrl },
+          headers,
+        },
+      ),
+    );
+  }
+
+  async getEventsGrid(
+    options: DataGridOptions,
+  ): Promise<
+    DataGridResult<Event & { creator: UserProfile; attendee_count: number }>
+  > {
+    let query = this.supabase.from('events').select(
+      `
         *,
         creator:user_profiles!events_created_by_fkey(user_id, display_name, email),
         attendee_count:event_attendees(count)
-      `, { count: 'exact' });
+      `,
+      { count: 'exact' },
+    );
 
     // Apply search
     if (options.search) {
-      query = query.or(`title.ilike.%${options.search}%,description.ilike.%${options.search}%`);
+      query = query.or(
+        `title.ilike.%${options.search}%,description.ilike.%${options.search}%`,
+      );
     }
 
     // Apply filters
@@ -509,7 +710,7 @@ export class SupabaseService {
     query = query.range(start, end);
 
     const { data, error, count } = await query;
-    
+
     if (error) throw error;
 
     return {
@@ -517,22 +718,29 @@ export class SupabaseService {
       count: count || 0,
       page: options.page,
       pageSize: options.pageSize,
-      totalPages: Math.ceil((count || 0) / options.pageSize)
+      totalPages: Math.ceil((count || 0) / options.pageSize),
     };
   }
 
-  async getMeetupsGrid(options: DataGridOptions): Promise<DataGridResult<Meetup & { creator: UserProfile; participant_count: number }>> {
-    let query = this.supabase
-      .from('meetups')
-      .select(`
+  async getMeetupsGrid(
+    options: DataGridOptions,
+  ): Promise<
+    DataGridResult<Meetup & { creator: UserProfile; participant_count: number }>
+  > {
+    let query = this.supabase.from('meetups').select(
+      `
         *,
         creator:user_profiles!meetups_created_by_fkey(user_id, display_name, email),
         participant_count:participants(count)
-      `, { count: 'exact' });
+      `,
+      { count: 'exact' },
+    );
 
     // Apply search
     if (options.search) {
-      query = query.or(`title.ilike.%${options.search}%,description.ilike.%${options.search}%`);
+      query = query.or(
+        `title.ilike.%${options.search}%,description.ilike.%${options.search}%`,
+      );
     }
 
     // Apply filters
@@ -566,7 +774,7 @@ export class SupabaseService {
     query = query.range(start, end);
 
     const { data, error, count } = await query;
-    
+
     if (error) throw error;
 
     return {
@@ -574,19 +782,30 @@ export class SupabaseService {
       count: count || 0,
       page: options.page,
       pageSize: options.pageSize,
-      totalPages: Math.ceil((count || 0) / options.pageSize)
+      totalPages: Math.ceil((count || 0) / options.pageSize),
     };
   }
 
-  async getChatMessagesGrid(options: DataGridOptions): Promise<DataGridResult<ChatMessage & { sender_profile: UserProfile; chat_info: any; reports_count: number }>> {
-    let query = this.supabase
-      .from('chat_messages')
-      .select(`
+  async getChatMessagesGrid(
+    options: DataGridOptions,
+  ): Promise<
+    DataGridResult<
+      ChatMessage & {
+        sender_profile: UserProfile;
+        chat_info: any;
+        reports_count: number;
+      }
+    >
+  > {
+    let query = this.supabase.from('chat_messages').select(
+      `
         *,
         sender_profile:user_profiles!chat_messages_sender_id_fkey(user_id, display_name, email),
         chat_info:chats!chat_messages_chat_id_fkey(id, type, name),
         reports_count:message_reports(count)
-      `, { count: 'exact' });
+      `,
+      { count: 'exact' },
+    );
 
     // Apply search
     if (options.search) {
@@ -628,7 +847,7 @@ export class SupabaseService {
     query = query.range(start, end);
 
     const { data, error, count } = await query;
-    
+
     if (error) throw error;
 
     return {
@@ -636,11 +855,17 @@ export class SupabaseService {
       count: count || 0,
       page: options.page,
       pageSize: options.pageSize,
-      totalPages: Math.ceil((count || 0) / options.pageSize)
+      totalPages: Math.ceil((count || 0) / options.pageSize),
     };
   }
 
-  async getUserReportsGrid(options: DataGridOptions): Promise<DataGridResult<UserReport & { reporter: UserProfile; reported_user: UserProfile }>> {
+  async getUserReportsGrid(
+    options: DataGridOptions,
+  ): Promise<
+    DataGridResult<
+      UserReport & { reporter: UserProfile; reported_user: UserProfile }
+    >
+  > {
     const { data, error } = await this.supabase.rpc('get_user_reports_grid', {
       page_num: options.page,
       page_size: options.pageSize,
@@ -650,14 +875,14 @@ export class SupabaseService {
       filter_status: options.filters?.['status'] || null,
       filter_reason: options.filters?.['reason'] || null,
       filter_date_from: options.filters?.['dateFrom'] || null,
-      filter_date_to: options.filters?.['dateTo'] || null
+      filter_date_to: options.filters?.['dateTo'] || null,
     });
-    
+
     if (error) throw error;
 
     // Extract the total count from the first row (if available)
     const totalCount = data && data.length > 0 ? data[0].total_count : 0;
-    
+
     // Filter out the total count row if it exists
     const reportData = data ? data.filter((row: any) => row.id !== null) : [];
 
@@ -666,22 +891,29 @@ export class SupabaseService {
       count: totalCount,
       page: options.page,
       pageSize: options.pageSize,
-      totalPages: Math.ceil(totalCount / options.pageSize)
+      totalPages: Math.ceil(totalCount / options.pageSize),
     };
   }
 
-  async getSubscriptionsGrid(options: DataGridOptions): Promise<DataGridResult<Subscription & { plan: SubscriptionPlan; user: UserProfile }>> {
-    let query = this.supabase
-      .from('subscriptions')
-      .select(`
+  async getSubscriptionsGrid(
+    options: DataGridOptions,
+  ): Promise<
+    DataGridResult<Subscription & { plan: SubscriptionPlan; user: UserProfile }>
+  > {
+    let query = this.supabase.from('subscriptions').select(
+      `
         *,
         plan:plans(*),
         user:user_profiles(user_id, display_name, email)
-      `, { count: 'exact' });
+      `,
+      { count: 'exact' },
+    );
 
     // Apply search
     if (options.search) {
-      query = query.or(`user.display_name.ilike.%${options.search}%,user.email.ilike.%${options.search}%`);
+      query = query.or(
+        `user.display_name.ilike.%${options.search}%,user.email.ilike.%${options.search}%`,
+      );
     }
 
     // Apply filters
@@ -709,7 +941,7 @@ export class SupabaseService {
     query = query.range(start, end);
 
     const { data, error, count } = await query;
-    
+
     if (error) throw error;
 
     return {
@@ -717,22 +949,27 @@ export class SupabaseService {
       count: count || 0,
       page: options.page,
       pageSize: options.pageSize,
-      totalPages: Math.ceil((count || 0) / options.pageSize)
+      totalPages: Math.ceil((count || 0) / options.pageSize),
     };
   }
 
   // Catalog Management Grid Methods
-  async getInterestsGrid(options: DataGridOptions): Promise<DataGridResult<any>> {
-    let query = this.supabase
-      .from('interests')
-      .select(`
+  async getInterestsGrid(
+    options: DataGridOptions,
+  ): Promise<DataGridResult<any>> {
+    let query = this.supabase.from('interests').select(
+      `
         *,
         usage_count:user_interests(count)
-      `, { count: 'exact' });
+      `,
+      { count: 'exact' },
+    );
 
     // Apply search
     if (options.search) {
-      query = query.or(`name.ilike.%${options.search}%,description.ilike.%${options.search}%`);
+      query = query.or(
+        `name.ilike.%${options.search}%,description.ilike.%${options.search}%`,
+      );
     }
 
     // Apply filters
@@ -754,7 +991,7 @@ export class SupabaseService {
     query = query.range(start, end);
 
     const { data, error, count } = await query;
-    
+
     if (error) throw error;
 
     return {
@@ -762,21 +999,26 @@ export class SupabaseService {
       count: count || 0,
       page: options.page,
       pageSize: options.pageSize,
-      totalPages: Math.ceil((count || 0) / options.pageSize)
+      totalPages: Math.ceil((count || 0) / options.pageSize),
     };
   }
 
-  async getLanguagesGrid(options: DataGridOptions): Promise<DataGridResult<any>> {
-    let query = this.supabase
-      .from('languages')
-      .select(`
+  async getLanguagesGrid(
+    options: DataGridOptions,
+  ): Promise<DataGridResult<any>> {
+    let query = this.supabase.from('languages').select(
+      `
         *,
         usage_count:user_languages(count)
-      `, { count: 'exact' });
+      `,
+      { count: 'exact' },
+    );
 
     // Apply search
     if (options.search) {
-      query = query.or(`name.ilike.%${options.search}%,native_name.ilike.%${options.search}%,code.ilike.%${options.search}%`);
+      query = query.or(
+        `name.ilike.%${options.search}%,native_name.ilike.%${options.search}%,code.ilike.%${options.search}%`,
+      );
     }
 
     // Apply filters
@@ -795,7 +1037,7 @@ export class SupabaseService {
     query = query.range(start, end);
 
     const { data, error, count } = await query;
-    
+
     if (error) throw error;
 
     return {
@@ -803,21 +1045,26 @@ export class SupabaseService {
       count: count || 0,
       page: options.page,
       pageSize: options.pageSize,
-      totalPages: Math.ceil((count || 0) / options.pageSize)
+      totalPages: Math.ceil((count || 0) / options.pageSize),
     };
   }
 
-  async getTaxonomiesGrid(options: DataGridOptions): Promise<DataGridResult<any>> {
-    let query = this.supabase
-      .from('taxonomies')
-      .select(`
+  async getTaxonomiesGrid(
+    options: DataGridOptions,
+  ): Promise<DataGridResult<any>> {
+    let query = this.supabase.from('taxonomies').select(
+      `
         *,
         interests_count:interests(count)
-      `, { count: 'exact' });
+      `,
+      { count: 'exact' },
+    );
 
     // Apply search
     if (options.search) {
-      query = query.or(`name.ilike.%${options.search}%,description.ilike.%${options.search}%`);
+      query = query.or(
+        `name.ilike.%${options.search}%,description.ilike.%${options.search}%`,
+      );
     }
 
     // Apply filters
@@ -836,7 +1083,7 @@ export class SupabaseService {
     query = query.range(start, end);
 
     const { data, error, count } = await query;
-    
+
     if (error) throw error;
 
     return {
@@ -844,20 +1091,23 @@ export class SupabaseService {
       count: count || 0,
       page: options.page,
       pageSize: options.pageSize,
-      totalPages: Math.ceil((count || 0) / options.pageSize)
+      totalPages: Math.ceil((count || 0) / options.pageSize),
     };
   }
 
   // CSV Export Methods
-  async exportToCSV(tableName: string, options: DataGridOptions): Promise<string> {
+  async exportToCSV(
+    tableName: string,
+    options: DataGridOptions,
+  ): Promise<string> {
     const { data, error } = await this.supabase.rpc('export_table_to_csv', {
       table_name: tableName,
       filters: options.filters || {},
       search_term: options.search || '',
       sort_by: options.sortBy || 'created_at',
-      sort_order: options.sortOrder || 'desc'
+      sort_order: options.sortOrder || 'desc',
     });
-    
+
     if (error) throw error;
     return data;
   }
@@ -867,7 +1117,7 @@ export class SupabaseService {
       .from('plans')
       .select('*')
       .order('created_at', { ascending: false });
-    
+
     if (error) throw error;
     return data || [];
   }

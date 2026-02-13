@@ -120,15 +120,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
         color: 'success',
         route: '/user-management'
       },
-      {
-        title: 'Total Subscriptions',
-        value: data.total_subscriptions,
-        change: data.total_subscriptions,
-        changeType: data.growth_rate >= 0 ? 'increase' as const : 'decrease' as const,
-        icon: 'attach_money',
-        color: 'accent',
-        route: '/subscription-payments'
-      },
+      // {
+      //   title: 'Total Subscriptions',
+      //   value: data.total_subscriptions,
+      //   change: data.total_subscriptions,
+      //   changeType: data.growth_rate >= 0 ? 'increase' as const : 'decrease' as const,
+      //   icon: 'attach_money',
+      //   color: 'accent',
+      //   route: '/subscription-payments'
+      // },
       {
         title: 'Total Reports',
         value: data.total_reports,

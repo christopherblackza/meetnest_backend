@@ -1,0 +1,16 @@
+{
+    "workbench.colorCustomizations": {
+        // ... other color customizations ...
+        "activityBar.background": "#e07823", // Updated to pink
+        "activityBar.activeBackground": "#cc9740", // Updated to pink
+        "activityBar.activeBorder": "#cc9740", // Updated to pink
+        // ... other color customizations ...
+        "titleBar.activeBackground": "#cc9740", // Updated to pink
+        // ... other color customizations ...
+        "statusBar.background": "#cc9740", // Updated to pink
+        // ... other color customizations ...
+        "statusBarItem.remoteBackground": "#cc9740", // Updated to pink
+        // ... other color customizations ...
+    },
+    "peacock.color": "#b52e31"
+}
