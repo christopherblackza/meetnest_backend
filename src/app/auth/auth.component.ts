@@ -9,6 +9,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { CommonModule } from '@angular/common';
 import { SupabaseService } from '../core/services/supabase.service';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-auth',
@@ -36,10 +37,17 @@ export class AuthComponent {
   loading = false;
   
   constructor() {
-    this.loginForm = this.fb.group({
-      email: ['christopher.black.sa@gmail.com', [Validators.required, Validators.email]],
-      password: ['Admin123', [Validators.required, Validators.minLength(6)]]
-    });
+    if (!environment.production) {
+      this.loginForm = this.fb.group({
+        email: ['christopher.black.sa@gmail.com', [Validators.required, Validators.email]],
+        password: ['Admin123', [Validators.required, Validators.minLength(6)]]
+      });
+    } else {
+      this.loginForm = this.fb.group({
+        email: ['', [Validators.required, Validators.email]],
+        password: ['', [Validators.required, Validators.minLength(6)]]
+      });
+    }
   }
   
   async onSubmit() {

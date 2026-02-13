@@ -1,3 +1,17 @@
+// main.ts (top of file, before imports of supabase)
+import { randomFillSync } from 'crypto';
+
+// Only define crypto if not already available
+if (!globalThis.crypto) {
+  // @ts-ignore
+  globalThis.crypto = {
+    getRandomValues: (array: ArrayBufferView) => {
+      randomFillSync(array as Uint8Array);
+      return array;
+    },
+  } as unknown as typeof globalThis.crypto;
+}
+
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger, ValidationPipe } from '@nestjs/common';
