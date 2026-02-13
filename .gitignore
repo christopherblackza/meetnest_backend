@@ -44,3 +44,4 @@ Thumbs.db
 /server/node_modules
 
 /server/.env
+/server/firebase-service-account.json
