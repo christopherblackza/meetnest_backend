@@ -9,15 +9,31 @@ export class AppController {
 
   @Get()
   @ApiOperation({ summary: 'Health check endpoint' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Service is healthy',
     schema: {
       type: 'string',
-      example: 'Hello World!'
-    }
+      example: 'Hello World!',
+    },
   })
   getHello(): string {
     return this.appService.getHello();
+  }
+
+  @Get('version')
+  @ApiOperation({ summary: 'Get application version' })
+  @ApiResponse({
+    status: 200,
+    description: 'Application version',
+    schema: {
+      type: 'object',
+      properties: {
+        version: { type: 'string', example: '1.0.0' },
+      },
+    },
+  })
+  getVersion() {
+    return this.appService.getVersion();
   }
 }

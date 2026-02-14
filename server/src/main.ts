@@ -1,22 +1,19 @@
-// main.ts (top of file, before imports of supabase)
-import { randomFillSync } from 'crypto';
-
-// Only define crypto if not already available
-if (!globalThis.crypto) {
-  // @ts-ignore
-  globalThis.crypto = {
-    getRandomValues: (array: ArrayBufferView) => {
-      randomFillSync(array as Uint8Array);
-      return array;
-    },
-  } as unknown as typeof globalThis.crypto;
-}
-
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger, ValidationPipe } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { AppModule } from './app.module';
 import './firebase/firebase-admin';
+
+// Polyfill for environments where global.crypto is not available (Node < 19)
+if (!global.crypto) {
+  try {
+    // @ts-ignore
+    global.crypto = crypto.webcrypto;
+  } catch (e) {
+    console.error('Failed to polyfill Web Crypto API:', e);
+  }
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -30,6 +27,7 @@ async function bootstrap() {
       'http://127.0.0.1:4200',
       'http://localhost:4201',
       'http://127.0.0.1:4201',
+      'https://main.d1rogwn8a44flw.amplifyapp.com',
     ], // Angular dev server URLs
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
