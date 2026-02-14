@@ -12,9 +12,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatGridListModule } from '@angular/material/grid-list';
 // Removed NgChartsModule import as it's not available
 import { ChartConfiguration, ChartData, ChartType } from 'chart.js';
-import { SupabaseService, AnalyticsOverview } from '../../core/services/supabase.service';
+import { AnalyticsService } from '../analytics/services/analytics.service';
+import { AnalyticsOverview } from '../analytics/models/analytics.models';
 import { Router } from '@angular/router';
-import { Subject, interval, takeUntil, startWith, switchMap } from 'rxjs';
+import { Subject, interval, takeUntil, startWith, switchMap, firstValueFrom } from 'rxjs';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 
 interface KPICard {
@@ -222,7 +223,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   });
 
   constructor(
-    private supabaseService: SupabaseService,
+    private analyticsService: AnalyticsService,
     private router: Router
   ) {}
 
@@ -268,10 +269,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
       const startDate = this.startDateControl.value?.toISOString().split('T')[0];
       const endDate = this.endDateControl.value?.toISOString().split('T')[0];
       
-      const data = await this.supabaseService.getAnalyticsOverview(dateRange, startDate, endDate);
-      console.error('DATA', data);
-      // Extract the first element from the array since the service returns an array
-      this.analyticsData.set(Array.isArray(data) ? data[0] : data);
+      const filters = {
+        date_range: dateRange,
+        start_date: startDate,
+        end_date: endDate,
+        metric_type: 'overview' as const
+      };
+      
+      const data = await firstValueFrom(this.analyticsService.getAnalyticsOverview(filters));
+      console.log('DATA', data);
+      this.analyticsData.set(data);
     } catch (error) {
       console.error('Error loading analytics data:', error);
       this.analyticsData.set(null);
@@ -300,8 +307,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   async exportData() {
     try {
-      const data = await this.supabaseService.exportAnalyticsData('csv', 'overview');
-      const blob = new Blob([data], { type: 'text/csv' });
+      const options = {
+        format: 'csv' as const,
+        data_type: 'overview' as const,
+        date_range: this.dateRangeControl.value || 'month'
+      };
+      
+      const blob = await firstValueFrom(this.analyticsService.exportData(options));
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;

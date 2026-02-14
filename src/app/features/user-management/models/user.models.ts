@@ -51,3 +51,18 @@ export interface DataGridResult<T> {
   page: number;
   pageSize: number;
 }
+
+export interface FounderMessageDto {
+  my_message: string;
+  title?: string;
+  topic?: string;
+  avatar_url?: string;
+}
+
+export interface FounderMessageResponse {
+  success: boolean;
+  message: string;
+  messageId?: string;
+  topic?: string;
+  error?: string;
+}

@@ -12,6 +12,7 @@ import { ClientsModule } from './clients/clients.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -19,8 +20,8 @@ import { ClientsModule } from './clients/clients.module';
         type: 'postgres',
         url: configService.get('DATABASE_URL'),
         autoLoadEntities: true,
-        synchronize: configService.get('NODE_ENV') !== 'production',
-        ssl: {
+         synchronize: false,  
+        ssl: configService.get('NODE_ENV') === 'development' ? false : {
           rejectUnauthorized: false,
         },
       }),

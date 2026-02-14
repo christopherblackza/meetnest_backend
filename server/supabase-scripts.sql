@@ -31,54 +31,6 @@ END;
 $$;
 
 
-CREATE OR REPLACE FUNCTION notify_activity_join_push()
-RETURNS trigger
-LANGUAGE plpgsql
-AS $$
-DECLARE
-    joiner_profile RECORD;
-    activity_info RECORD;
-    creator_id UUID;
-BEGIN
-    -- Skip if this is the creator joining their own activity
-    IF NEW.is_creator = true THEN
-        RETURN NEW;
-    END IF;
-
-    -- Get the joiner's profile details
-    SELECT display_name, avatar_url INTO joiner_profile
-    FROM public.user_profiles
-    WHERE user_id = NEW.user_id;
-
-    -- Get activity details and find the creator
-    SELECT 
-        a.title,
-        ap.user_id as creator_user_id
-    INTO activity_info
-    FROM public.activities a
-    JOIN public.activity_participants ap ON a.id = ap.activity_id
-    WHERE a.id = NEW.activity_id 
-    AND ap.is_creator = true;
-
-    -- Send the HTTP POST request to notify the activity creator
-    PERFORM http_post(
-        'https://meetnestmcp-production.up.railway.app/notifications/activity-join',
-        json_build_object(
-            'activity_id', NEW.activity_id,
-            'user_id', NEW.user_id,
-            'creator_id', activity_info.creator_user_id,
-            'activity_title', COALESCE(activity_info.title, 'Unknown Activity'),
-            'joiner_display_name', COALESCE(joiner_profile.display_name, 'Unknown User'),
-            'joiner_avatar_url', joiner_profile.avatar_url,
-            'is_creator', NEW.is_creator
-        )::jsonb
-    );
-
-    RETURN NEW;
-END;
-$$;
-
-
 
 -- TRIGGERS
 -- Trigger on friend_requests
@@ -86,12 +38,6 @@ DROP TRIGGER IF EXISTS trg_notify_friend_request_push ON friend_requests;
 CREATE TRIGGER trg_notify_friend_request_push
 AFTER INSERT ON friend_requests 
 FOR EACH ROW EXECUTE FUNCTION notify_friend_request_push();
-
--- Trigger on activity_participants
-DROP TRIGGER IF EXISTS trg_notify_activity_join_push ON activity_participants;
-CREATE TRIGGER trg_notify_activity_join_push
-AFTER INSERT ON activity_participants 
-FOR EACH ROW EXECUTE FUNCTION notify_activity_join_push();
 
 
 CREATE OR REPLACE FUNCTION get_users_list(

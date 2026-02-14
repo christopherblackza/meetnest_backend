@@ -1,7 +1,9 @@
 import { Injectable } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, from } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { SupabaseService } from '../../../core/services/supabase.service';
+import { environment } from '../../../../environments/environment';
 import {
   AnalyticsOverview,
   UserAnalytics,
@@ -17,20 +19,18 @@ import {
   providedIn: 'root'
 })
 export class AnalyticsService {
-  constructor(private supabase: SupabaseService) {}
+  constructor(
+    private supabase: SupabaseService,
+    private http: HttpClient
+  ) {}
 
   getAnalyticsOverview(filters: AnalyticsFilters): Observable<AnalyticsOverview> {
-    return from(
-      this.supabase.client.rpc('get_analytics_overview', {
-        date_range: filters.date_range,
-        start_date: filters.start_date || null,
-        end_date: filters.end_date || null
-      })
-    ).pipe(
-      map(({ data, error }) => {
-        if (error) throw error;
-        return data[0] as AnalyticsOverview;
-      }),
+    let params = new HttpParams();
+    if (filters.date_range) params = params.set('date_range', filters.date_range);
+    if (filters.start_date) params = params.set('start_date', filters.start_date);
+    if (filters.end_date) params = params.set('end_date', filters.end_date);
+
+    return this.http.get<AnalyticsOverview>(`${environment.nestApiUrl}/users/analytics/overview`, { params }).pipe(
       catchError(error => {
         console.error('Error fetching analytics overview:', error);
         throw error;

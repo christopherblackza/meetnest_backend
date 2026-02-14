@@ -82,4 +82,51 @@ export class GetUsersQueryDto {
   @IsOptional()
   @IsString()
   exclude_user_id?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by user status' })
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by user role' })
+  @IsOptional()
+  @IsString()
+  role?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by verified status' })
+  @IsOptional()
+  @Type(() => Boolean)
+  verified?: boolean;
+
+  @ApiPropertyOptional({ description: 'Minimum trust score' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  trustScoreMin?: number;
+
+  @ApiPropertyOptional({ description: 'Maximum trust score' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  trustScoreMax?: number;
+
+  @ApiPropertyOptional({ description: 'Filter by creation date from' })
+  @IsOptional()
+  @IsString()
+  dateFrom?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by creation date to' })
+  @IsOptional()
+  @IsString()
+  dateTo?: string;
+
+  @ApiPropertyOptional({ description: 'Sort by field' })
+  @IsOptional()
+  @IsString()
+  sortBy?: string;
+
+  @ApiPropertyOptional({ description: 'Sort order (asc or desc)' })
+  @IsOptional()
+  @IsString()
+  sortOrder?: 'asc' | 'desc';
 }

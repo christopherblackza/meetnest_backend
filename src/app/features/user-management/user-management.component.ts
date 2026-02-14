@@ -1,6 +1,6 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, ViewChild, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormControl, ReactiveFormsModule, FormGroup } from '@angular/forms';
+import { FormControl, ReactiveFormsModule, FormGroup, Validators, FormBuilder } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatButtonModule } from '@angular/material/button';
@@ -21,10 +21,9 @@ import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDividerModule } from '@angular/material/divider';
 import { Observable, debounceTime, distinctUntilChanged } from 'rxjs';
-import { UserProfile, UserStats, DataGridOptions, DataGridResult } from './models/user.models';
+import { UserProfile, UserStats, DataGridOptions, DataGridResult, FounderMessageDto } from './models/user.models';
 import { UserManagementService } from './services/user-management.service';
 import { UserDetailDialogComponent } from './components/user-detail-dialog.component';
-import { SupabaseService } from '../../core/services/supabase.service';
 
 interface KPICard {
   title: string;
@@ -80,7 +79,6 @@ export class UserManagementComponent implements OnInit {
   // Form controls for filtering
   searchControl = new FormControl('');
   statusFilter = new FormControl<string[]>([]);
-  verificationFilter = new FormControl<string[]>([]);
   roleFilter = new FormControl<string[]>([]);
   trustScoreFilter = new FormControl('');
 
@@ -96,49 +94,25 @@ export class UserManagementComponent implements OnInit {
     dateTo: new FormControl<Date | null>(null)
   });
 
+  // Founder Message
+  @ViewChild('founderMessageDialog') founderMessageDialog!: TemplateRef<any>;
+  founderMessageForm: FormGroup;
+  founderMessageTopics = [
+    { value: 'all', label: 'All Users' },
+    { value: 'role_user', label: 'Role: User' },
+    { value: 'role_admin', label: 'Role: Admin' },
+    { value: 'role_moderator', label: 'Role: Moderator' },
+    { value: 'verified', label: 'Verified Users' },
+    { value: 'premium', label: 'Premium Users' },
+    { value: 'test', label: 'Test Topic' }
+  ];
+
   displayedColumns = ['select', 'avatar', 'name', 'status', 'trustScore', 'role', 'actions'];
 
   // Computed properties
   filteredUsers = computed(() => {
-    let filtered = this.users();
-    const search = this.searchControl.value?.toLowerCase() || '';
-    const statusFilters = this.statusFilter.value || [];
-    const verificationFilters = this.verificationFilter.value || [];
-    const roleFilters = this.roleFilter.value || [];
-    const trustScoreFilter = this.trustScoreFilter.value;
-
-    if (search) {
-      filtered = filtered.filter(user => 
-        user.display_name?.toLowerCase().includes(search) ||
-        user.email?.toLowerCase().includes(search) ||
-        user.user_id.includes(search)
-      );
-    }
-
-    if (statusFilters.length > 0) {
-      filtered = filtered.filter(user => statusFilters.includes(user.status));
-    }
-
-    if (verificationFilters.length > 0) {
-      filtered = filtered.filter(user => verificationFilters.includes(user.verification_status));
-    }
-
-    if (roleFilters.length > 0) {
-      filtered = filtered.filter(user => roleFilters.includes(user.role));
-    }
-
-    if (trustScoreFilter) {
-      filtered = filtered.filter(user => {
-        switch (trustScoreFilter) {
-          case 'high': return user.trust_score >= 80;
-          case 'medium': return user.trust_score >= 60 && user.trust_score < 80;
-          case 'low': return user.trust_score < 60;
-          default: return true;
-        }
-      });
-    }
-
-    return filtered;
+    // Server side filtering is used, so we just return the users loaded from server
+    return this.users();
   });
 
   kpiCards = computed(() => {
@@ -191,10 +165,16 @@ export class UserManagementComponent implements OnInit {
 
   constructor(
     private userService: UserManagementService,
-    private supabaseService: SupabaseService,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
-  ) {}
+    private snackBar: MatSnackBar,
+    private fb: FormBuilder
+  ) {
+    this.founderMessageForm = this.fb.group({
+      topic: ['all', Validators.required],
+      title: ['Message from Founder', Validators.required],
+      message: ['', Validators.required]
+    });
+  }
 
   ngOnInit() {
     this.loadUsers();
@@ -208,16 +188,26 @@ export class UserManagementComponent implements OnInit {
       debounceTime(300),
       distinctUntilChanged()
     ).subscribe(() => {
+      this.currentPage.set(0);
       this.loadUsers();
     });
 
     // React to filter changes
-    this.statusFilter.valueChanges.subscribe(() => this.loadUsers());
-    this.verificationFilter.valueChanges.subscribe(() => this.loadUsers());
-    this.roleFilter.valueChanges.subscribe(() => this.loadUsers());
-    this.trustScoreFilter.valueChanges.subscribe(() => this.loadUsers());
+    this.statusFilter.valueChanges.subscribe(() => {
+        this.currentPage.set(0);
+        this.loadUsers();
+    });
+    this.roleFilter.valueChanges.subscribe(() => {
+        this.currentPage.set(0);
+        this.loadUsers();
+    });
+    this.trustScoreFilter.valueChanges.subscribe(() => {
+        this.currentPage.set(0);
+        this.loadUsers();
+    });
   }
 
+  
   async loadUsers() {
     this.loading.set(true);
     
@@ -231,15 +221,13 @@ export class UserManagementComponent implements OnInit {
         filters: {
           role: this.roleFilter.value?.[0] || undefined,
           status: this.statusFilter.value?.[0] || undefined,
-          verified: this.verificationFilter.value?.includes('verified') || undefined,
-          trustScoreMin: undefined,
-          trustScoreMax: undefined,
+          trustScoreMin: this.getTrustScoreMin(this.trustScoreFilter.value),
+          trustScoreMax: this.getTrustScoreMax(this.trustScoreFilter.value),
           dateFrom: undefined,
           dateTo: undefined
         }
       };
 
-      // Use actual service call instead of mock
       this.userService.getUsers(options).subscribe({
         next: (result) => {
           this.dataResult.set(result);
@@ -260,10 +248,29 @@ export class UserManagementComponent implements OnInit {
       this.loading.set(false);
     }
   }
+  
+  private getTrustScoreMin(filterValue: string | null): number | undefined {
+      if (!filterValue) return undefined;
+      switch (filterValue) {
+          case 'high': return 80;
+          case 'medium': return 60;
+          case 'low': return undefined;
+          default: return undefined;
+      }
+  }
+
+  private getTrustScoreMax(filterValue: string | null): number | undefined {
+      if (!filterValue) return undefined;
+      switch (filterValue) {
+          case 'high': return undefined;
+          case 'medium': return 79;
+          case 'low': return 59;
+          default: return undefined;
+      }
+  }
 
   async loadStats() {
     try {
-      // Use actual service call instead of mock
       this.userService.getUserStats().subscribe({
         next: (stats) => {
           this.stats.set(stats);
@@ -298,7 +305,6 @@ export class UserManagementComponent implements OnInit {
   clearFilters() {
     this.searchControl.reset();
     this.statusFilter.reset();
-    this.verificationFilter.reset();
     this.roleFilter.reset();
     this.trustScoreFilter.reset();
     this.filtersForm.reset();
@@ -307,44 +313,7 @@ export class UserManagementComponent implements OnInit {
   }
 
   async exportToCsv() {
-    try {
-      this.loading.set(true);
-      const options: DataGridOptions = {
-        page: 0,
-        pageSize: 10000, // Export all
-        sortBy: this.sortBy(),
-        sortOrder: this.sortOrder(),
-        search: this.searchControl.value || undefined,
-        filters: {
-          role: this.roleFilter.value?.[0] || undefined,
-          status: this.statusFilter.value?.[0] || undefined,
-          verified: this.verificationFilter.value?.includes('verified') || undefined,
-          trustScoreMin: undefined,
-          trustScoreMax: undefined,
-          dateFrom: undefined,
-          dateTo: undefined
-        }
-      };
-
-      // Mock CSV data - replace with actual service call
-      const csvData = 'ID,Name,Email,Status,Role,Trust Score\n';
-      
-      // Create and download CSV file
-      const blob = new Blob([csvData], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `users_${new Date().toISOString().split('T')[0]}.csv`;
-      link.click();
-      window.URL.revokeObjectURL(url);
-      
-      this.snackBar.open('Users exported successfully', 'Close', { duration: 3000 });
-    } catch (error) {
-      console.error('Error exporting users:', error);
-      this.snackBar.open('Error exporting users', 'Close', { duration: 3000 });
-    } finally {
-      this.loading.set(false);
-    }
+    this.exportUsers();
   }
 
   // Selection methods
@@ -363,7 +332,7 @@ export class UserManagementComponent implements OnInit {
 
   toggleAll(selected: boolean) {
     if (selected) {
-      this.selectedUsers.set([...this.filteredUsers()]);
+      this.selectedUsers.set([...this.users()]);
     } else {
       this.selectedUsers.set([]);
     }
@@ -386,26 +355,49 @@ export class UserManagementComponent implements OnInit {
   }
 
   async updateStatus(user: UserProfile, status: 'active' | 'suspended' | 'banned') {
-    try {
-      // Mock implementation - replace with actual service call
-      user.status = status;
-      this.snackBar.open(`User ${status}`, 'Close', { duration: 3000 });
-      this.loadUsers(); // Refresh data
-    } catch (error) {
-      this.snackBar.open('Error updating user status', 'Close', { duration: 3000 });
-    }
+    this.userService.updateUserStatus(user.user_id, status).subscribe({
+        next: () => {
+             this.snackBar.open(`User ${status}`, 'Close', { duration: 3000 });
+             this.loadUsers();
+        },
+        error: (err) => {
+            this.snackBar.open('Error updating user status', 'Close', { duration: 3000 });
+        }
+    });
   }
 
   async updateVerification(user: UserProfile, status: 'verified' | 'rejected') {
-    try {
-      // Mock implementation - replace with actual service call
-      user.verification_status = status;
-      user.is_verified = status === 'verified';
-      this.snackBar.open(`User verification ${status}`, 'Close', { duration: 3000 });
-      this.loadUsers(); // Refresh data
-    } catch (error) {
-      this.snackBar.open('Error updating verification', 'Close', { duration: 3000 });
-    }
+     const newStatus = status === 'verified' ? 'verified' : 'rejected';
+     // Note: API supports 'pending' too but UI only calls with verified/rejected here
+     this.userService.updateVerificationStatus(user.user_id, newStatus).subscribe({
+         next: () => {
+             this.snackBar.open(`User verification ${status}`, 'Close', { duration: 3000 });
+             this.loadUsers();
+         },
+         error: (err) => {
+             this.snackBar.open('Error updating verification', 'Close', { duration: 3000 });
+         }
+     });
+  }
+
+  async recalculateTrustScore(user: UserProfile) {
+    this.userService.recalculateTrustScore(user.user_id).subscribe({
+      next: (newScore) => {
+        this.snackBar.open(`Trust score updated: ${newScore}`, 'Close', { duration: 3000 });
+        // Update the local user object to reflect the change immediately
+        const users = this.users();
+        const index = users.findIndex(u => u.user_id === user.user_id);
+        if (index !== -1) {
+            const updatedUsers = [...users];
+            updatedUsers[index] = { ...user, trust_score: newScore };
+            this.users.set(updatedUsers);
+        }
+      },
+      error: (err) => {
+        console.error('Error recalculating trust score:', err);
+        this.snackBar.open('Error recalculating trust score', 'Close', { duration: 3000 });
+      }
+    });
   }
 
   async bulkAction(action: 'verify' | 'suspend' | 'activate') {
@@ -416,58 +408,120 @@ export class UserManagementComponent implements OnInit {
     if (!confirm(confirmMessage)) return;
 
     try {
-      for (const user of selected) {
-        switch (action) {
-          case 'verify':
-            await this.updateVerification(user, 'verified');
-            break;
-          case 'suspend':
-            await this.updateStatus(user, 'suspended');
-            break;
-          case 'activate':
-            await this.updateStatus(user, 'active');
-            break;
-        }
-      }
+      // Execute sequentially to avoid overwhelming server or just fire all
+      // For simplicity using Promise.all with conversion to promise
+      const promises = selected.map(user => {
+          return new Promise<void>((resolve, reject) => {
+             let obs: Observable<any>;
+             if (action === 'verify') {
+                 obs = this.userService.updateVerificationStatus(user.user_id, 'verified');
+             } else if (action === 'suspend') {
+                 obs = this.userService.updateUserStatus(user.user_id, 'suspended');
+             } else {
+                 obs = this.userService.updateUserStatus(user.user_id, 'active');
+             }
+             
+             obs.subscribe({
+                 next: () => resolve(),
+                 error: (err) => reject(err)
+             });
+          });
+      });
+
+      await Promise.all(promises);
+      
       this.selectedUsers.set([]);
       this.snackBar.open(`Bulk ${action} completed`, 'Close', { duration: 3000 });
+      this.loadUsers();
     } catch (error) {
       this.snackBar.open(`Error during bulk ${action}`, 'Close', { duration: 3000 });
+      this.loadUsers(); // Reload anyway to show partial success
     }
+  }
+
+  openFounderMessageDialog() {
+    this.founderMessageForm.reset({
+      topic: 'all',
+      title: 'Message from Founder',
+      message: ''
+    });
+    this.dialog.open(this.founderMessageDialog, {
+      width: '500px',
+      disableClose: true,
+      panelClass: 'founder-message-dialog'
+    });
+  }
+
+  sendFounderMessage() {
+    if (this.founderMessageForm.invalid) return;
+
+    const { topic, title, message } = this.founderMessageForm.value;
+    
+    this.loading.set(true);
+    
+    this.userService.sendFounderMessage({
+      topic,
+      title,
+      my_message: message
+    }).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.snackBar.open('Founder message sent successfully', 'Close', { duration: 3000 });
+          this.dialog.closeAll();
+        } else {
+          this.snackBar.open(response.error || 'Failed to send message', 'Close', { duration: 3000 });
+        }
+        this.loading.set(false);
+      },
+      error: (error) => {
+        console.error('Error sending founder message:', error);
+        this.snackBar.open('Error sending founder message', 'Close', { duration: 3000 });
+        this.loading.set(false);
+      }
+    });
   }
 
   async exportUsers() {
     try {
-      // Mock implementation - replace with actual service call
-      const csvData = 'ID,Name,Email,Status,Role,Trust Score\n';
-      const blob = new Blob([csvData], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `users-export-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
+      this.loading.set(true);
+      
+      const filters = {
+          role: this.roleFilter.value?.[0] || undefined,
+          status: this.statusFilter.value?.[0] || undefined,
+          trustScoreMin: this.getTrustScoreMin(this.trustScoreFilter.value),
+          trustScoreMax: this.getTrustScoreMax(this.trustScoreFilter.value)
+      };
+
+      this.userService.exportUsers(filters).subscribe({
+          next: (blob) => {
+              const url = window.URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `users_${new Date().toISOString().split('T')[0]}.csv`;
+              link.click();
+              window.URL.revokeObjectURL(url);
+              this.snackBar.open('Users exported successfully', 'Close', { duration: 3000 });
+              this.loading.set(false);
+          },
+          error: (err) => {
+              console.error('Error exporting users:', err);
+              this.snackBar.open('Error exporting users', 'Close', { duration: 3000 });
+              this.loading.set(false);
+          }
+      });
     } catch (error) {
+      console.error('Error exporting users:', error);
       this.snackBar.open('Error exporting users', 'Close', { duration: 3000 });
+      this.loading.set(false);
     }
   }
 
-  // Utility methods
   getStatusColor(status: string): string {
     switch (status) {
       case 'active': return 'primary';
       case 'suspended': return 'warn';
       case 'banned': return 'warn';
-      default: return 'basic';
-    }
-  }
-
-  getVerificationColor(status: string): string {
-    switch (status) {
-      case 'verified': return 'primary';
-      case 'pending': return 'accent';
-      case 'rejected': return 'warn';
-      default: return 'basic';
+      default: return 'primary';
     }
   }
 
@@ -475,17 +529,12 @@ export class UserManagementComponent implements OnInit {
     switch (role) {
       case 'admin': return 'warn';
       case 'moderator': return 'accent';
-      default: return 'basic';
+      case 'user': return 'primary';
+      default: return 'primary';
     }
   }
 
-  getTrustScoreClass(score: number): string {
-    if (score >= 80) return 'high';
-    if (score >= 60) return 'medium';
-    return 'low';
-  }
-
-  getTrustScoreColor(score: number): 'primary' | 'accent' | 'warn' {
+  getTrustScoreColor(score: number): string {
     if (score >= 80) return 'primary';
     if (score >= 60) return 'accent';
     return 'warn';

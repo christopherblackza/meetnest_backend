@@ -5,6 +5,17 @@ export interface AnalyticsOverview {
   total_subscriptions: number;
   growth_rate: number;
   churn_rate: number;
+  new_users_7d: number;
+  new_users_30d: number;
+  total_reports: number;
+  reports_opened: number;
+  reports_resolved: number;
+  meetups_created: number;
+  events_created: number;
+  // Optional fields that might be returned
+  active_paid_users?: number;
+  churned_subscriptions?: number;
+  total_attendees?: number;
 }
 
 export interface ChartDataPoint {

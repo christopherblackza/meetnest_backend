@@ -3,6 +3,10 @@
       <div class="header">
         <h1>User Management</h1>
         <div class="header-actions">
+          <button mat-raised-button color="primary" (click)="openFounderMessageDialog()">
+            <mat-icon>campaign</mat-icon>
+            Send Founder Message
+          </button>
           <button mat-raised-button color="primary" (click)="exportUsers()">
             <mat-icon>download</mat-icon>
             Export CSV
@@ -56,14 +60,6 @@
               </mat-select>
             </mat-form-field>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Verification</mat-label>
-              <mat-select [formControl]="verificationFilter" multiple>
-                <mat-option value="verified">Verified</mat-option>
-                <mat-option value="pending">Pending</mat-option>
-                <mat-option value="rejected">Rejected</mat-option>
-              </mat-select>
-            </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Role</mat-label>
@@ -126,8 +122,6 @@
               <td mat-cell *matCellDef="let user">
                 <div class="user-info">
                   <div class="user-name">{{user.display_name}}</div>
-                  <div class="user-email">{{user.email}}</div>
-                  <div class="user-id">ID: {{user.user_id}}</div>
                 </div>
               </td>
             </ng-container>
@@ -183,6 +177,10 @@
                     <mat-icon>info</mat-icon>
                     <span>View Details</span>
                   </button>
+                  <button mat-menu-item (click)="recalculateTrustScore(user)">
+                    <mat-icon>refresh</mat-icon>
+                    <span>Recalculate Trust Score</span>
+                  </button>
                   <mat-divider></mat-divider>
                   <button mat-menu-item (click)="updateStatus(user, 'active')" *ngIf="user.status !== 'active'">
                     <mat-icon>check_circle</mat-icon>
@@ -224,3 +222,53 @@
         </mat-card-content>
       </mat-card>
     </div>
+
+<ng-template #founderMessageDialog>
+  <div class="dialog-header">
+    <h2 mat-dialog-title>Send Founder Message</h2>
+    <button mat-icon-button mat-dialog-close>
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+  
+  <mat-dialog-content>
+    <div class="founder-message-info">
+      <mat-icon color="primary">info</mat-icon>
+      <p>Send a founder message to all users subscribed to a specific topic</p>
+    </div>
+
+    <form [formGroup]="founderMessageForm" class="founder-message-form">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Topic *</mat-label>
+        <mat-select formControlName="topic">
+          <mat-option *ngFor="let topic of founderMessageTopics" [value]="topic.value">
+            {{topic.label}}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Title *</mat-label>
+        <input matInput formControlName="title" placeholder="Message from Founder">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Message *</mat-label>
+        <textarea matInput formControlName="message" rows="5" placeholder="Enter founder message"></textarea>
+      </mat-form-field>
+
+      <div class="topic-preview" *ngIf="founderMessageForm.get('topic')?.value">
+        Topic: {{founderMessageForm.get('topic')?.value}}
+      </div>
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close>Cancel</button>
+    <button mat-raised-button color="primary" 
+            (click)="sendFounderMessage()" 
+            [disabled]="founderMessageForm.invalid || loading()">
+      {{loading() ? 'Sending...' : 'Send Message'}}
+    </button>
+  </mat-dialog-actions>
+</ng-template>
