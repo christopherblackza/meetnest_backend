@@ -26,9 +26,10 @@ import {
   SubscriptionStats,
   SubscriptionFilters
 } from './models/subscription-payments.models';
-import { SupabaseService, DataGridOptions, DataGridResult, Subscription as SupabaseSubscription, SubscriptionPlan, UserProfile } from '../../core/services/supabase.service';
+import { SupabaseService, DataGridOptions, DataGridResult, Subscription as SupabaseSubscription, SubscriptionPlan } from '../../core/services/supabase.service';
 import { CreatePlanDialogComponent } from './components/create-plan-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
+import { UserProfile } from '../user-management/models/user.models';
 
 // Extended types to match the data returned from the service
 type ExtendedSubscription = SupabaseSubscription & { 

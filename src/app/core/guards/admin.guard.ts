@@ -1,50 +1,40 @@
-import { Injectable } from '@angular/core';
-import { CanActivate, Router } from '@angular/router';
-import { Observable } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
-import { SupabaseService, UserProfile } from '../services/supabase.service';
+import { inject } from '@angular/core';
+import { Router, CanActivateFn } from '@angular/router';
+import { map, filter, switchMap, take, catchError } from 'rxjs/operators';
+import { AuthService } from '../services/auth.service';
+import { UserManagementService } from '../../features/user-management/services/user-management.service.base';
+import { of } from 'rxjs';
 
-@Injectable({
-  providedIn: 'root'
-})
-export class AdminGuard implements CanActivate {
+export const adminGuard: CanActivateFn = () => {
+  const authService = inject(AuthService);
+  const userManagementService = inject(UserManagementService);
+  const router = inject(Router);
 
-  constructor(
-    private supabaseService: SupabaseService,
-    private router: Router
-  ) {}
-
-  canActivate(): Observable<boolean> {
-    return this.supabaseService.currentUser$.pipe(
-      switchMap(user => {
-        console.error('USER:', user);
-        if (!user) {
-          this.router.navigate(['/auth']);
-          return new Observable<boolean>(observer => {
-            observer.next(false);
-            observer.complete();
-          });
-        }
-        
-        // Get user profile to check role
-        return new Observable<boolean>(observer => {
-          this.supabaseService.getUserRole(user.id).then((response) => {
-            console.error('User role:', response.role);
-            if (response && response.role === 'admin') {
-              observer.next(true);
-            } else {
-              this.router.navigate(['/unauthorized']);
-              observer.next(false);
-            }
-            observer.complete();
-          }).catch((error: any) => {
-            console.error('Error checking admin access:', error);
-            this.router.navigate(['/unauthorized']);
-            observer.next(false);
-            observer.complete();
-          });
-        });
-      })
-    );
-  }
-}
+  return authService.sessionLoaded$.pipe(
+    filter(loaded => loaded),
+    switchMap(() => authService.currentUser$),
+    take(1),
+    switchMap(user => {
+      if (!user) {
+        router.navigate(['/auth']);
+        return of(false);
+      }
+      
+      return userManagementService.getUserById(user.id).pipe(
+        map(profile => {
+          if (profile && profile.role === 'admin') {
+            return true;
+          } else {
+            router.navigate(['/unauthorized']);
+            return false;
+          }
+        }),
+        catchError(error => {
+          console.error('Error checking admin access:', error);
+          router.navigate(['/unauthorized']);
+          return of(false);
+        })
+      );
+    })
+  );
+};

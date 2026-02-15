@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
-import { AdminGuard } from './core/guards/admin.guard';
+import { adminGuard } from './core/guards/admin.guard';
 import { ModeratorGuard } from './core/guards/moderator.guard';
 
 export const routes: Routes = [
@@ -21,16 +21,7 @@ export const routes: Routes = [
         path: 'dashboard',
         loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)
       },
-      {
-        path: 'events',
-        loadComponent: () => import('./features/events/events.component').then(m => m.EventsComponent),
-        canActivate: [ModeratorGuard]
-      },
-      {
-        path: 'meetups',
-        loadComponent: () => import('./features/meetups/meetups.component').then(m => m.MeetupsComponent),
-        canActivate: [ModeratorGuard]
-      },
+
       {
         path: 'messaging',
         loadComponent: () => import('./features/messaging/messaging.component').then(m => m.MessagingComponent),
@@ -39,12 +30,12 @@ export const routes: Routes = [
       {
         path: 'catalog',
         loadComponent: () => import('./features/catalog/catalog.component').then(m => m.CatalogComponent),
-        canActivate: [AdminGuard]
+        canActivate: [adminGuard]
       },
       {
         path: 'clients',
         loadChildren: () => import('./features/clients/clients.routes').then(m => m.CLIENTS_ROUTES),
-        canActivate: [AdminGuard]
+        canActivate: [adminGuard]
       },
       {
         path: 'users',
@@ -64,12 +55,12 @@ export const routes: Routes = [
       {
         path: 'subscriptions',
         loadChildren: () => import('./features/subscription-payments/subscription-payments.routes').then(m => m.subscriptionPaymentsRoutes),
-        canActivate: [AdminGuard]
+        canActivate: [adminGuard]
       },
       {
         path: 'analytics',
         loadChildren: () => import('./features/analytics/analytics.routes').then(m => m.analyticsRoutes),
-        canActivate: [AdminGuard]
+        canActivate: [adminGuard]
       },
       {
         path: 'notifications',

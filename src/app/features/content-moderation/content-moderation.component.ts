@@ -21,7 +21,8 @@ import { ContentModerationService } from './services/content-moderation.service'
 import { ContentFlag, ModerationStats, ModerationFilters, ModerationAction } from './models/moderation.models';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatDividerModule } from '@angular/material/divider';
-import { SupabaseService, DataGridOptions, DataGridResult, UserProfile, UserReport } from '../../core/services/supabase.service';
+import { SupabaseService, DataGridOptions, DataGridResult, UserReport } from '../../core/services/supabase.service';
+import { UserProfile } from '../user-management/models/user.models';
 
 // Use the UserReport from SupabaseService which matches the actual data structure
 type ExtendedUserReport = UserReport & { 

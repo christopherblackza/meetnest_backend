@@ -4,19 +4,8 @@ import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
 import { environment } from '../../../environments/environment';
 import { BehaviorSubject, Observable, from, firstValueFrom } from 'rxjs';
 import { Client } from '../models/client.model';
+import { UserProfile } from '../../features/user-management/models/user.models';
 
-// Data Types from Technical Architecture
-export interface UserProfile {
-  user_id: string;
-  display_name: string;
-  email: string;
-  role: 'user' | 'admin' | 'moderator';
-  status: 'active' | 'suspended' | 'banned';
-  trust_score: number;
-  created_at: string;
-  current_city?: string;
-  current_country?: string;
-}
 
 export interface AnalyticsOverview {
   total_users: number;
@@ -254,6 +243,9 @@ export class SupabaseService {
     return data[0];
   }
 
+  /**
+   * @deprecated Use UserManagementService.getUserById() instead.
+   */
   async getUserRole(
     userId: string,
   ): Promise<{ user_id: string; role: string }> {

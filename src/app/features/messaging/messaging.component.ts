@@ -17,9 +17,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
-import { SupabaseService, ChatMessage, UserProfile, DataGridOptions, DataGridResult } from '../../core/services/supabase.service';
+import { SupabaseService, ChatMessage, DataGridOptions, DataGridResult } from '../../core/services/supabase.service';
 import { Router } from '@angular/router';
 import {MatDividerModule} from '@angular/material/divider';
+import { UserProfile } from '../user-management/models/user.models';
 
 
 interface ChatMessageWithDetails extends ChatMessage {

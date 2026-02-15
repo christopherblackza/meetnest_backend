@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { CanActivate, Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
-import { SupabaseService, UserProfile } from '../services/supabase.service';
+import { SupabaseService } from '../services/supabase.service';
 
 @Injectable({
   providedIn: 'root'
