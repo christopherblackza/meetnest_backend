@@ -1,7 +1,7 @@
 import { Component, inject, signal, OnInit, AfterViewInit, ViewChild } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
-import { SupabaseService } from "../../core/services/supabase.service";
+import { ClientService } from "./services/client.service.base";
 import { NavigationComponent } from "../../shared/components/navigation/navigation.component";
 import { Client, ClientType } from "../../core/models/client.model";
 import { MatFormFieldModule } from "@angular/material/form-field";
@@ -37,7 +37,7 @@ import { RouterModule } from "@angular/router";
   styleUrl: "./clients.component.scss",
 })
 export class ClientsComponent implements OnInit, AfterViewInit {
-  private supabase = inject(SupabaseService);
+  private clientService = inject(ClientService);
 
   displayedColumns: string[] = ["name", "type", "rating", "actions"];
   dataSource = new MatTableDataSource<Client>([]);
@@ -64,27 +64,31 @@ export class ClientsComponent implements OnInit, AfterViewInit {
     }
   }
 
-  async loadClients() {
+  loadClients() {
     this.isLoading.set(true);
-    try {
-      const data = await this.supabase.getClients();
-      console.log("clients:", data);
-      this.dataSource.data = data;
-    } catch (error) {
-      console.error("Error loading clients:", error);
-    } finally {
-      this.isLoading.set(false);
-    }
+    this.clientService.getClients().subscribe({
+      next: (data) => {
+        console.log("clients:", data);
+        this.dataSource.data = data;
+        this.isLoading.set(false);
+      },
+      error: (error) => {
+        console.error("Error loading clients:", error);
+        this.isLoading.set(false);
+      }
+    });
   }
 
-  async deleteClient(id: string) {
+  deleteClient(id: string) {
     if (confirm("Are you sure you want to delete this client?")) {
-      try {
-        await this.supabase.deleteClient(id);
-        await this.loadClients();
-      } catch (error) {
-        console.error("Error deleting client:", error);
-      }
+      this.clientService.deleteClient(id).subscribe({
+        next: () => {
+          this.loadClients();
+        },
+        error: (error) => {
+          console.error("Error deleting client:", error);
+        }
+      });
     }
   }
 }

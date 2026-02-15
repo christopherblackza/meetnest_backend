@@ -11,7 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Chart, registerables } from 'chart.js';
-import { AnalyticsService } from '../services/analytics.service';
+import { AnalyticsService } from '../services/analytics.service.base';
 import {
   AnalyticsOverview,
   UserAnalytics,

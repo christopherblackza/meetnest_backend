@@ -2,14 +2,14 @@ import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Router } from '@angular/router';
 import { map, exhaustMap, catchError, tap, switchMap } from 'rxjs/operators';
-import { SupabaseService } from '../../services/supabase.service';
+import { AuthService } from '../../services/auth.service';
 import * as AuthActions from './auth.actions';
 import { AuthUser } from './auth.models';
 
 @Injectable()
 export class AuthEffects {
   private actions$ = inject(Actions);
-  private supabaseService = inject(SupabaseService);
+  private authService = inject(AuthService);
   private router = inject(Router);
   
   // Login Effect
@@ -17,7 +17,7 @@ export class AuthEffects {
     this.actions$.pipe(
       ofType(AuthActions.loginStart),
       exhaustMap(({ email, password }) =>
-        this.supabaseService.signIn(email, password).then(({ data, error }) => {
+        this.authService.signIn(email, password).then(({ data, error }) => {
           if (error) {
             return AuthActions.loginFailure({ error: error.message });
           }
@@ -58,10 +58,7 @@ export class AuthEffects {
     this.actions$.pipe(
       ofType(AuthActions.logout),
       exhaustMap(() =>
-        this.supabaseService.signOut().then(({ error }) => {
-          if (error) {
-            return AuthActions.logoutFailure({ error: error.message });
-          }
+        this.authService.signOut().then(() => {
           return AuthActions.logoutSuccess();
         }).catch(error =>
           AuthActions.logoutFailure({ error: error.message })
@@ -86,7 +83,7 @@ export class AuthEffects {
     this.actions$.pipe(
       ofType(AuthActions.checkAuthSession),
       switchMap(() =>
-        this.supabaseService.currentUser$.pipe(
+        this.authService.currentUser$.pipe(
           map(user => {
             if (user) {
               const authUser: AuthUser = {

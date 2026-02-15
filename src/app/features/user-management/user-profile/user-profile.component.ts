@@ -7,7 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatListModule } from '@angular/material/list';
-import { UserManagementService } from '../services/user-management.service';
+import { UserManagementService } from '../services/user-management.service.base';
 import { UserProfile } from '../models/user.models';
 import { firstValueFrom } from 'rxjs';
 

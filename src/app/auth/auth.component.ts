@@ -8,8 +8,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { CommonModule } from '@angular/common';
-import { SupabaseService } from '../core/services/supabase.service';
+import { AuthService } from '../core/services/auth.service';
 import { environment } from '../../environments/environment';
+import packageJson from '../../../package.json';
 
 @Component({
   selector: 'app-auth',
@@ -30,11 +31,12 @@ import { environment } from '../../environments/environment';
 export class AuthComponent {
   private fb = inject(FormBuilder);
   private router = inject(Router);
-  private supabase = inject(SupabaseService);
+  private authService = inject(AuthService);
   private snackBar = inject(MatSnackBar);
   
   loginForm: FormGroup;
   loading = false;
+  version = packageJson.version;
   
   constructor() {
     if (!environment.production) {
@@ -55,7 +57,7 @@ export class AuthComponent {
       this.loading = true;
       const { email, password } = this.loginForm.value;
       
-      const { data, error } = await this.supabase.signIn(email, password);
+      const { data, error } = await this.authService.signIn(email, password);
       
       if (error) {
         this.snackBar.open(error.message, 'Close', {

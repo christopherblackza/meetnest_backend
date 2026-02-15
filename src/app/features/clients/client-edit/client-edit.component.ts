@@ -8,7 +8,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { SupabaseService } from '../../../core/services/supabase.service';
+import { ClientService } from '../services/client.service.base';
 import { Client } from '../../../core/models/client.model';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -40,7 +40,7 @@ import { MapSelectorComponent } from '../../../shared/components/map-selector/ma
   styleUrls: ['./client-edit.component.scss'],
 })
 export class ClientEditComponent implements OnInit {
-  private supabaseService = inject(SupabaseService);
+  private clientService = inject(ClientService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private formBuilder = inject(FormBuilder);
@@ -94,25 +94,27 @@ export class ClientEditComponent implements OnInit {
     }
   }
 
-  async loadClientData(id: string) {
+  loadClientData(id: string) {
     this.isLoading.set(true);
-    try {
-      const client = await this.supabaseService.getClientById(id);
-      if (client) {
-        this.clientForm.patchValue(client);
-        if (client.imageUrls) {
-          this.clientImages.set(client.imageUrls);
+    this.clientService.getClientById(id).subscribe({
+      next: (client) => {
+        if (client) {
+          this.clientForm.patchValue(client);
+          // Check both property names to be safe, preferring image_url as per interface
+          const images = client.image_url || (client as any).imageUrls || [];
+          this.clientImages.set(images);
+          
+          if (client.logo_url) {
+            this.logoUrl.set(client.logo_url);
+          }
         }
-        
-        if (client.logoUrl) {
-          this.logoUrl.set(client.logoUrl);
-        }
+        this.isLoading.set(false);
+      },
+      error: (error) => {
+        console.error('Error loading client:', error);
+        this.isLoading.set(false);
       }
-    } catch (error) {
-      console.error('Error loading client:', error);
-    } finally {
-      this.isLoading.set(false);
-    }
+    });
   }
 
   async onLogoSelected(event: any) {
@@ -159,20 +161,23 @@ export class ClientEditComponent implements OnInit {
     if (!clientId) return;
 
     this.isUploadingLogo.set(true);
-    try {
-      const newLogoUrl = await this.supabaseService.uploadClientLogo(clientId, this.selectedLogoFile);
-      this.logoUrl.set(newLogoUrl);
-      this.clientForm.patchValue({ logoUrl: newLogoUrl });
-      
-      // Clear selection state
-      this.selectedLogoFile = null;
-      this.originalLogoUrl = null;
-    } catch (error: any) {
-      console.error('Error uploading logo:', error);
-      alert('Failed to upload logo: ' + (error.message || 'Unknown error'));
-    } finally {
-      this.isUploadingLogo.set(false);
-    }
+    
+    this.clientService.uploadClientLogo(clientId, this.selectedLogoFile).subscribe({
+      next: (newLogoUrl) => {
+        this.logoUrl.set(newLogoUrl);
+        this.clientForm.patchValue({ logoUrl: newLogoUrl });
+        
+        // Clear selection state
+        this.selectedLogoFile = null;
+        this.originalLogoUrl = null;
+        this.isUploadingLogo.set(false);
+      },
+      error: (error: any) => {
+        console.error('Error uploading logo:', error);
+        alert('Failed to upload logo: ' + (error.message || 'Unknown error'));
+        this.isUploadingLogo.set(false);
+      }
+    });
   }
 
   cancelLogoUpload() {
@@ -221,61 +226,74 @@ export class ClientEditComponent implements OnInit {
     if (validFiles.length === 0) return;
 
     this.isUploading.set(true);
-    try {
-      const newUrls = await this.supabaseService.uploadClientImages(clientId, validFiles);
-      const updatedImages = [...this.clientImages(), ...newUrls];
-      this.clientImages.set(updatedImages);
-      this.clientForm.patchValue({ image_url: updatedImages });
-    } catch (error: any) {
-      console.error('Error uploading images:', error);
-      alert('Failed to upload images: ' + (error.message || 'Unknown error'));
-    } finally {
-      this.isUploading.set(false);
-      // Reset file input
-      event.target.value = '';
-    }
+    
+    this.clientService.uploadClientImages(clientId, validFiles).subscribe({
+      next: (newUrls) => {
+        const updatedImages = [...this.clientImages(), ...newUrls];
+        this.clientImages.set(updatedImages);
+        this.clientForm.patchValue({ image_url: updatedImages });
+        this.isUploading.set(false);
+        // Reset file input
+        event.target.value = '';
+      },
+      error: (error: any) => {
+        console.error('Error uploading images:', error);
+        alert('Failed to upload images: ' + (error.message || 'Unknown error'));
+        this.isUploading.set(false);
+        // Reset file input
+        event.target.value = '';
+      }
+    });
   }
 
-  async removeImage(imageUrl: string) {
+  removeImage(imageUrl: string) {
     const clientId = this.editingId();
     if (!clientId) return;
 
     if (!confirm('Are you sure you want to remove this image?')) return;
 
-    try {
-      await this.supabaseService.removeClientImage(clientId, imageUrl);
-      const updatedImages = this.clientImages().filter(url => url !== imageUrl);
-      this.clientImages.set(updatedImages);
-      this.clientForm.patchValue({ image_url: updatedImages });
-    } catch (error: any) {
-      console.error('Error removing image:', error);
-      alert('Failed to remove image: ' + (error.message || 'Unknown error'));
-    }
+    this.clientService.removeClientImage(clientId, imageUrl).subscribe({
+      next: () => {
+        const updatedImages = this.clientImages().filter(url => url !== imageUrl);
+        this.clientImages.set(updatedImages);
+        this.clientForm.patchValue({ image_url: updatedImages });
+      },
+      error: (error: any) => {
+        console.error('Error removing image:', error);
+        alert('Failed to remove image: ' + (error.message || 'Unknown error'));
+      }
+    });
   }
 
-  async saveClient() {
+  saveClient() {
     if (this.clientForm.invalid) {
       alert('Please fill in all required fields');
       return;
     }
 
     this.isSaving.set(true);
-    try {
-      const formData = this.clientForm.value;
-      if (this.editingId()) {
-        await this.supabaseService.updateClient(this.editingId()!, formData);
-      } else {
-        await this.supabaseService.createClient(formData);
-      }
-      this.router.navigate(['/clients']);
-    } catch (error: any) {
-      const errorMsg =
-        error?.message || error?.error_description || String(error) || 'Unknown error';
-      console.error('Error saving client:', errorMsg);
-      alert('Error: ' + errorMsg);
-    } finally {
-      this.isSaving.set(false);
+    const formData = this.clientForm.value;
+    
+    let request$;
+    if (this.editingId()) {
+      request$ = this.clientService.updateClient(this.editingId()!, formData);
+    } else {
+      request$ = this.clientService.createClient(formData);
     }
+    
+    request$.subscribe({
+      next: () => {
+        this.router.navigate(['/clients']);
+        this.isSaving.set(false);
+      },
+      error: (error: any) => {
+        const errorMsg =
+          error?.message || error?.error_description || String(error) || 'Unknown error';
+        console.error('Error saving client:', errorMsg);
+        alert('Error: ' + errorMsg);
+        this.isSaving.set(false);
+      }
+    });
   }
 
   onLocationSelected(location: any) {

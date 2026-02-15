@@ -22,7 +22,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDividerModule } from '@angular/material/divider';
 import { Observable, debounceTime, distinctUntilChanged } from 'rxjs';
 import { UserProfile, UserStats, DataGridOptions, DataGridResult, FounderMessageDto } from './models/user.models';
-import { UserManagementService } from './services/user-management.service';
+import { UserManagementService } from './services/user-management.service.base';
 import { UserDetailDialogComponent } from './components/user-detail-dialog.component';
 
 interface KPICard {

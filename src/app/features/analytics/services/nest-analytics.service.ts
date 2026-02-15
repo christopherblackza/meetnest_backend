@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, from } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { SupabaseService } from '../../../core/services/supabase.service';
+import { AnalyticsService } from './analytics.service.base';
 import { environment } from '../../../../environments/environment';
 import {
   AnalyticsOverview,
@@ -18,11 +19,13 @@ import {
 @Injectable({
   providedIn: 'root'
 })
-export class AnalyticsService {
+export class NestAnalyticsService extends AnalyticsService {
   constructor(
     private supabase: SupabaseService,
     private http: HttpClient
-  ) {}
+  ) {
+    super();
+  }
 
   getAnalyticsOverview(filters: AnalyticsFilters): Observable<AnalyticsOverview> {
     let params = new HttpParams();

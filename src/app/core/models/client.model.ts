@@ -16,6 +16,6 @@ export interface Client {
   email?: string;
   rating?: number;
   image_url?: string[];
-  logoUrl?: string;
+  logo_url?: string;
   created_at: string;
 }

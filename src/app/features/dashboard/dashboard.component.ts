@@ -12,7 +12,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatGridListModule } from '@angular/material/grid-list';
 // Removed NgChartsModule import as it's not available
 import { ChartConfiguration, ChartData, ChartType } from 'chart.js';
-import { AnalyticsService } from '../analytics/services/analytics.service';
+import { AnalyticsService } from '../analytics/services/analytics.service.base';
 import { AnalyticsOverview } from '../analytics/models/analytics.models';
 import { Router } from '@angular/router';
 import { Subject, interval, takeUntil, startWith, switchMap, firstValueFrom } from 'rxjs';

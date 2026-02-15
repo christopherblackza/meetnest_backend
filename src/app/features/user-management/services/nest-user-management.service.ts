@@ -1,15 +1,18 @@
 import { Injectable } from '@angular/core';
 import { Observable, from, map, catchError, of, throwError } from 'rxjs';
 import { UserProfile, UserStats, DataGridOptions, DataGridResult, FounderMessageDto, FounderMessageResponse } from '../models/user.models';
+import { UserManagementService } from './user-management.service.base';
 import { environment } from '../../../../environments/environment';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 
 @Injectable({
   providedIn: 'root'
 })
-export class UserManagementService {
+export class NestUserManagementService extends UserManagementService {
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {
+    super();
+  }
 
   // Get paginated users with filters
   getUsers(options: DataGridOptions): Observable<DataGridResult<UserProfile>> {

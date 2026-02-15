@@ -35,6 +35,10 @@
               <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
               <span *ngIf="!loading">Sign In</span>
             </button>
+            
+            <div class="version-display">
+              v{{ version }}
+            </div>
           </form>
         </mat-card-content>
       </mat-card>
