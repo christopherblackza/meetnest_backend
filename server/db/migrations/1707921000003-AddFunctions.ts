@@ -1,10 +1,10 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddFunctions1707921000002 implements MigrationInterface {
-    name = 'AddFunctions1707921000002';
+export class AddFunctions1707921000003 implements MigrationInterface {
+  name = 'AddFunctions1707921000003';
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
 create or replace function public.register_user(
     _user_id uuid,
     _display_name text,
@@ -2713,6 +2713,7 @@ CREATE OR REPLACE FUNCTION public.get_activities_in_bounds(
 $$;
 
 
+
 CREATE OR REPLACE FUNCTION public.get_activities_map(
     p_user_id uuid,
     p_min_lat double precision,
@@ -3890,11 +3891,88 @@ order by distance_meters asc
 limit p_limit_count;
 $$;
 
-    `);
-    }
+CREATE OR REPLACE FUNCTION public.get_user_analytics(
+    date_range text DEFAULT 'month'
+)
+RETURNS json AS $$
+DECLARE
+    result json;
+BEGIN
+    SELECT json_build_object(
+        'new_users_today', (SELECT new_users_today FROM view_user_analytics_overview),
+        'new_users_this_week', (SELECT new_users_this_week FROM view_user_analytics_overview),
+        'new_users_this_month', (SELECT new_users_this_month FROM view_user_analytics_overview),
+        'user_retention_rate', COALESCE((SELECT AVG(retention_rate) FROM view_user_retention_analytics), 0),
+        'user_growth_data', (
+            SELECT json_agg(
+                json_build_object(
+                    'label', label,
+                    'value', value
+                ) ORDER BY date
+            )
+            FROM user_growth_chart_data
+        )
+    ) INTO result;
+    
+    RETURN result;
+END;
+$$ LANGUAGE plpgsql;
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`
+CREATE OR REPLACE FUNCTION public.get_analytics_overview(
+    date_range text DEFAULT 'month',
+    start_date date DEFAULT NULL,
+    end_date date DEFAULT NULL
+)
+RETURNS TABLE (
+    total_users bigint,
+    active_users bigint,
+    total_subscriptions bigint,
+    total_reports bigint
+) AS $$
+DECLARE
+    filter_start_date date;
+    filter_end_date date;
+BEGIN
+    -- Set date range based on parameter
+    CASE date_range
+        WHEN 'today' THEN
+            filter_start_date := CURRENT_DATE;
+            filter_end_date := CURRENT_DATE + INTERVAL '1 day';
+        WHEN 'week' THEN
+            filter_start_date := CURRENT_DATE - INTERVAL '7 days';
+            filter_end_date := CURRENT_DATE + INTERVAL '1 day';
+        WHEN 'month' THEN
+            filter_start_date := CURRENT_DATE - INTERVAL '30 days';
+            filter_end_date := CURRENT_DATE + INTERVAL '1 day';
+        WHEN 'quarter' THEN
+            filter_start_date := CURRENT_DATE - INTERVAL '90 days';
+            filter_end_date := CURRENT_DATE + INTERVAL '1 day';
+        WHEN 'year' THEN
+            filter_start_date := CURRENT_DATE - INTERVAL '365 days';
+            filter_end_date := CURRENT_DATE + INTERVAL '1 day';
+        WHEN 'custom' THEN
+            filter_start_date := COALESCE(start_date, CURRENT_DATE - INTERVAL '30 days');
+            filter_end_date := COALESCE(end_date, CURRENT_DATE + INTERVAL '1 day');
+        ELSE
+            filter_start_date := CURRENT_DATE - INTERVAL '30 days';
+            filter_end_date := CURRENT_DATE + INTERVAL '1 day';
+    END CASE;
+
+    RETURN QUERY
+    SELECT 
+        (SELECT COUNT(*) FROM user_profiles)::bigint AS total_users,
+        (SELECT COUNT(*) FROM user_profiles WHERE status = 'active')::bigint AS active_users,
+        (SELECT COUNT(*) FROM subscriptions WHERE status = 'active' AND created_at BETWEEN filter_start_date AND filter_end_date)::bigint AS total_subscriptions,
+        (SELECT COUNT(*) FROM user_reports WHERE created_at BETWEEN filter_start_date AND filter_end_date)::bigint AS total_reports;
+END;
+$$ LANGUAGE plpgsql;
+
+
+    `);
+  }
+
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
 DO $$
 DECLARE r record;
 BEGIN
@@ -3975,6 +4053,8 @@ BEGIN
       ('public','update_user_location'),
       ('public','update_user_preferences'),
       ('public','update_user_profile')
+      ('public','get_analytics_overview'),
+      ('public','get_user_analytics')
     ) AS t(nsp, proname)
       ON t.nsp = n.nspname AND t.proname = p.proname
   LOOP
@@ -3983,5 +4063,5 @@ BEGIN
   END LOOP;
 END $$;
     `);
-    }
+  }
 }

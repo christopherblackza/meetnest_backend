@@ -1,7 +1,7 @@
 -- =============== ANALYTICS VIEWS ===============
 
 -- User Analytics Overview
-CREATE OR REPLACE VIEW user_analytics_overview AS
+CREATE OR REPLACE VIEW view_user_analytics_overview AS
 SELECT 
     COUNT(*) as total_users,
     COUNT(CASE WHEN created_at >= CURRENT_DATE THEN 1 END) as new_users_today,
@@ -34,7 +34,7 @@ GROUP BY DATE_TRUNC('day', created_at)
 ORDER BY date;
 
 -- Revenue Analytics Overview
-CREATE OR REPLACE VIEW revenue_analytics_overview AS
+CREATE OR REPLACE VIEW view_revenue_analytics_overview AS
 SELECT 
     COALESCE(SUM(CASE WHEN p.status = 'succeeded' THEN p.amount_cents END), 0)::float / 100 as total_revenue,
     COALESCE(SUM(CASE WHEN p.status = 'succeeded' AND p.created_at >= CURRENT_DATE THEN p.amount_cents END), 0)::float / 100 as daily_revenue,
@@ -61,18 +61,11 @@ LEFT JOIN payments p ON p.subscription_id = s.id;
 
 
 -- Revenue Chart Data
-CREATE OR REPLACE VIEW revenue_chart_data AS
-SELECT 
-    DATE_TRUNC('day', p.created_at) as date,
-    TO_CHAR(DATE_TRUNC('day', p.created_at), 'Mon DD') as label,
-    COALESCE(SUM(CASE WHEN p.status = 'succeeded' THEN p.amount_cents END), 0)::float / 100 as value
-FROM payments p
-WHERE p.created_at >= CURRENT_DATE - INTERVAL '30 days'
-GROUP BY DATE_TRUNC('day', p.created_at)
-ORDER BY date;
+
+
 
 -- Content Analytics Overview
-CREATE OR REPLACE VIEW content_analytics_overview AS
+CREATE OR REPLACE VIEW view.content_analytics_overview AS
 SELECT 
     (SELECT COUNT(*) FROM meetups) as total_meetups,
     (SELECT COUNT(*) FROM events) as total_events,
@@ -97,7 +90,7 @@ SELECT
 
 -- User Retention Analytics
 -- User Retention Analytics
-CREATE OR REPLACE VIEW user_retention_analytics AS
+CREATE OR REPLACE VIEW view_user_retention_analytics AS
 WITH user_cohorts AS (
     SELECT 
         user_id,

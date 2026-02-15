@@ -59,10 +59,10 @@ DECLARE
     result json;
 BEGIN
     SELECT json_build_object(
-        'new_users_today', (SELECT new_users_today FROM user_analytics_overview),
-        'new_users_this_week', (SELECT new_users_this_week FROM user_analytics_overview),
-        'new_users_this_month', (SELECT new_users_this_month FROM user_analytics_overview),
-        'user_retention_rate', COALESCE((SELECT AVG(retention_rate) FROM user_retention_analytics), 0),
+        'new_users_today', (SELECT new_users_today FROM view_user_analytics_overview),
+        'new_users_this_week', (SELECT new_users_this_week FROM view_user_analytics_overview),
+        'new_users_this_month', (SELECT new_users_this_month FROM view_user_analytics_overview),
+        'user_retention_rate', COALESCE((SELECT AVG(retention_rate) FROM view_user_retention_analytics), 0),
         'user_growth_data', (
             SELECT json_agg(
                 json_build_object(
@@ -87,10 +87,10 @@ DECLARE
     result json;
 BEGIN
     SELECT json_build_object(
-        'daily_revenue', COALESCE((SELECT daily_revenue FROM revenue_analytics_overview), 0),
-        'weekly_revenue', COALESCE((SELECT weekly_revenue FROM revenue_analytics_overview), 0),
-        'monthly_revenue', COALESCE((SELECT monthly_revenue FROM revenue_analytics_overview), 0),
-        'revenue_growth_rate', COALESCE((SELECT revenue_growth_rate FROM revenue_analytics_overview), 0),
+        'daily_revenue', COALESCE((SELECT daily_revenue FROM view_revenue_analytics_overview), 0),
+        'weekly_revenue', COALESCE((SELECT weekly_revenue FROM view_revenue_analytics_overview), 0),
+        'monthly_revenue', COALESCE((SELECT monthly_revenue FROM view_revenue_analytics_overview), 0),
+        'revenue_growth_rate', COALESCE((SELECT revenue_growth_rate FROM view_revenue_analytics_overview), 0),
         'revenue_chart_data', (
             SELECT json_agg(
                 json_build_object(
@@ -115,10 +115,10 @@ DECLARE
     result json;
 BEGIN
     SELECT json_build_object(
-        'total_meetups', (SELECT total_meetups FROM content_analytics_overview),
-        'total_events', (SELECT total_events FROM content_analytics_overview),
-        'total_chats', (SELECT total_chats FROM content_analytics_overview),
-        'content_engagement_rate', COALESCE((SELECT content_engagement_rate FROM content_analytics_overview), 0)
+        'total_meetups', (SELECT total_meetups FROM view.content_analytics_overview),
+        'total_events', (SELECT total_events FROM view.content_analytics_overview),
+        'total_chats', (SELECT total_chats FROM view.content_analytics_overview),
+        'content_engagement_rate', COALESCE((SELECT content_engagement_rate FROM view.content_analytics_overview), 0)
     ) INTO result;
     
     RETURN result;

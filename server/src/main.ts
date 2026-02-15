@@ -27,7 +27,7 @@ async function bootstrap() {
       'http://127.0.0.1:4200',
       'http://localhost:4201',
       'http://127.0.0.1:4201',
-      'https://main.d1rogwn8a44flw.amplifyapp.com',
+      'https://admin.meetro.app',
     ], // Angular dev server URLs
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],

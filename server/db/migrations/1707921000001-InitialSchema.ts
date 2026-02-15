@@ -1,15 +1,15 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class InitialSchema1707921000001 implements MigrationInterface {
-    name = 'InitialSchema1707921000001';
+  name = 'InitialSchema1707921000001';
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        // Enable extensions if they don't exist
-        await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`);
-        await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "postgis";`);
-      
-        // Execute the SQL from tables.sql
-        await queryRunner.query(`
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    // Enable extensions if they don't exist
+    await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`);
+    await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "postgis";`);
+
+    // Execute the SQL from tables.sql
+    await queryRunner.query(`
        
           
             -- =============================================
@@ -54,6 +54,10 @@ export class InitialSchema1707921000001 implements MigrationInterface {
                 referral_source_other text,
                 latitude double precision,
                 longitude double precision,
+                geo_location geography(POINT, 4326) GENERATED ALWAYS AS (
+                    ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)
+                ) STORED,
+                mobile_number text,
                 gender text,
                 role text DEFAULT 'user' CHECK (role IN ('user','admin','moderator','co-founder')),
                 status text DEFAULT 'active' CHECK (status IN ('active','suspended','banned')),
@@ -61,7 +65,7 @@ export class InitialSchema1707921000001 implements MigrationInterface {
                 is_founder boolean DEFAULT false,
                 is_bot boolean DEFAULT false,
                 verification_photo_url text,
-                last_active_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+                last_active_at timestamptz,
                 trust_score integer DEFAULT 100 CHECK (trust_score >= 0 AND trust_score <= 100),
                 created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
                 geo_location geography(POINT, 4326) GENERATED ALWAYS AS (
@@ -418,6 +422,17 @@ export class InitialSchema1707921000001 implements MigrationInterface {
                 UNIQUE(user_id, chat_id)
             );
 
+            CREATE TABLE IF NOT EXISTS payments (
+                id uuid primary key default gen_random_uuid(),
+                subscription_id uuid references subscriptions(id) on delete cascade,
+                provider text not null,
+                provider_payment_id text not null,
+                amount_cents integer not null,
+                currency text not null default 'USD',
+                status text not null check (status in ('succeeded', 'failed', 'pending')),
+                created_at timestamptz default now()
+            );
+
             create table if not exists user_devices (
                 id uuid primary key default gen_random_uuid(),
                 user_id uuid references user_profiles(user_id) on delete cascade,
@@ -430,7 +445,7 @@ export class InitialSchema1707921000001 implements MigrationInterface {
             );
 
 
-            create table public.clients (
+            create table if not exists clients (
                 id uuid primary key default uuid_generate_v4(),
                 name text not null,
                 type text check (
@@ -463,11 +478,11 @@ export class InitialSchema1707921000001 implements MigrationInterface {
                 updated_at timestamp with time zone default now()
             );
         `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        // Drop tables in reverse order of creation to avoid foreign key constraints
-        await queryRunner.query(`
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    // Drop tables in reverse order of creation to avoid foreign key constraints
+    await queryRunner.query(`
             DROP TABLE IF EXISTS user_references;
             DROP TABLE IF EXISTS profile_views;
             DROP TABLE IF EXISTS local_ambassadors;
@@ -496,5 +511,5 @@ export class InitialSchema1707921000001 implements MigrationInterface {
             DROP TABLE IF EXISTS bots;
             DROP TABLE IF EXISTS system_users;
         `);
-    }
+  }
 }

@@ -24,10 +24,10 @@ export default new DataSource({
       : 'src/**/*.entity.ts', // TS files for development
   ],
   migrations: [
-    isProduction
-      ? 'dist/db/migrations/*.js'
-      : 'db/migrations/*.ts',
+    isProduction ? 'dist/db/migrations/*.js' : 'db/migrations/*.ts',
+    'db/migrations/*.ts',
   ],
-  subscribers: [],
-  ssl: !isProduction ? false : { rejectUnauthorized: false },
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
