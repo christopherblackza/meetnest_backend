@@ -166,11 +166,8 @@ export class ClientEditComponent implements OnInit {
       next: (newLogoUrl) => {
         this.logoUrl.set(newLogoUrl);
 
-        this.clientForm.patchValue({
-          logo_url: newLogoUrl
-        })
-
-        this.clientForm.patchValue({ logoUrl: newLogoUrl });
+   
+        this.clientForm.patchValue({ logo_url: newLogoUrl });
         
         // Clear selection state
         this.selectedLogoFile = null;
@@ -278,7 +275,8 @@ export class ClientEditComponent implements OnInit {
 
     this.isSaving.set(true);
     const formData = this.clientForm.value;
-    
+      console.log("formData", formData)
+
     let request$;
     if (this.editingId()) {
       request$ = this.clientService.updateClient(this.editingId()!, formData);
