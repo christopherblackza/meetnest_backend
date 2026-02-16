@@ -165,6 +165,11 @@ export class ClientEditComponent implements OnInit {
     this.clientService.uploadClientLogo(clientId, this.selectedLogoFile).subscribe({
       next: (newLogoUrl) => {
         this.logoUrl.set(newLogoUrl);
+
+        this.clientForm.patchValue({
+          logo_url: newLogoUrl
+        })
+
         this.clientForm.patchValue({ logoUrl: newLogoUrl });
         
         // Clear selection state

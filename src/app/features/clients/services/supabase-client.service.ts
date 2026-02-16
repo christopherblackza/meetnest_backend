@@ -79,7 +79,7 @@ export class SupabaseClientService extends ClientService {
 
   uploadClientLogo(clientId: string, file: File): Observable<string> {
     return from((async () => {
-      const path = `${clientId}/logo-${Date.now()}-${file.name}`;
+      const path = `${clientId}/logo/${Date.now()}`;
       const { data, error } = await this.supabase.client.storage
         .from('client-images')
         .upload(path, file, { upsert: true });
