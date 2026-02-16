@@ -64,9 +64,9 @@ export class CreateClientDto {
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
-  imageUrls?: string[];
+  image_url?: string[];
 
   @IsString()
   @IsOptional()
-  logoUrl?: string;
+  logo_url?: string;
 }

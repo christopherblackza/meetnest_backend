@@ -82,7 +82,7 @@ export class ClientEditComponent implements OnInit {
       google_maps_link: [''],
       rating: [0],
       image_url: [[]],
-      logoUrl: [''],
+      logo_url: [''],
     });
   }
 
