@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { SupabaseService } from '../../../core/services/supabase.service';
+import packageJson from '../../../../../package.json';
 
 @Component({
   selector: 'app-layout',
@@ -29,6 +30,7 @@ import { SupabaseService } from '../../../core/services/supabase.service';
 export class LayoutComponent {
   private supabase = inject(SupabaseService);
   private router = inject(Router);
+  appVersion = packageJson.version;
   
   async logout() {
     await this.supabase.signOut();
