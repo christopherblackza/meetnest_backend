@@ -16,6 +16,10 @@
   width: 100%;
 }
 
+::ng-deep .leaflet-control-zoom {
+  display: none !important;
+}
+
 .map-controls {
   position: absolute;
   top: 1rem;
