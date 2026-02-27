@@ -67,6 +67,7 @@ export class ClientEditComponent implements OnInit {
 
   addressSearchResults = signal<NominatimResult[]>([]);
   isSearchingAddress = signal(false);
+  showManualCoords = signal(false);
   private addressSearchSubject = new Subject<string>();
 
   clientTypes = [

@@ -33,6 +33,12 @@
 .client-edit-header {
   margin-bottom: 2rem;
 
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
   h1 {
     font-size: 1.5rem;
     font-weight: 500;
@@ -161,8 +167,28 @@
     }
   }
 
+  .location-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
   .map-select-btn {
     flex-shrink: 0;
+  }
+
+  .manual-toggle-btn {
+    font-size: 0.85rem;
+  }
+}
+
+.manual-coords {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+
+  .coord-field {
+    flex: 1;
   }
 }
 
