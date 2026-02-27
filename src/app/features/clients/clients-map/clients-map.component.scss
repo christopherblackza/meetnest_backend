@@ -1,0 +1,94 @@
+:host {
+  display: block;
+  height: 100vh;
+  width: 100%;
+  position: relative;
+}
+
+.map-page {
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+.map-container {
+  height: 100%;
+  width: 100%;
+}
+
+.map-controls {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 1000;
+
+  .back-btn {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+// Circular logo marker
+::ng-deep .client-marker {
+  background: none;
+  border: none;
+
+  img {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    object-fit: cover;
+    background-color: #fff;
+  }
+}
+
+::ng-deep .client-marker--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #3f51b5;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+// Popup styling
+::ng-deep .client-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 140px;
+
+  strong {
+    font-size: 0.95rem;
+  }
+
+  .popup-type {
+    font-size: 0.8rem;
+    color: #666;
+    text-transform: capitalize;
+  }
+
+  .popup-address {
+    font-size: 0.8rem;
+    color: #888;
+    margin-top: 0.15rem;
+  }
+}

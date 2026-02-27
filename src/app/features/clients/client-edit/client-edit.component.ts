@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -7,7 +7,10 @@ import {
   FormBuilder,
   Validators,
 } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap, tap } from 'rxjs/operators';
 import { ClientService } from '../services/client.service.base';
 import { Client } from '../../../core/models/client.model';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -17,7 +20,9 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { MapSelectorComponent } from '../../../shared/components/map-selector/map-selector.component';
+import { NominatimService, NominatimResult } from '../../../shared/services/nominatim.service';
 
 @Component({
   selector: 'app-client-edit',
@@ -34,7 +39,8 @@ import { MapSelectorComponent } from '../../../shared/components/map-selector/ma
     MatIconModule,
     MatCardModule,
     MatProgressSpinnerModule,
-    MapSelectorComponent
+    MatAutocompleteModule,
+    MapSelectorComponent,
   ],
   templateUrl: './client-edit.component.html',
   styleUrls: ['./client-edit.component.scss'],
@@ -44,6 +50,8 @@ export class ClientEditComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private formBuilder = inject(FormBuilder);
+  private nominatimService = inject(NominatimService);
+  private destroyRef = inject(DestroyRef);
 
   clientForm: FormGroup;
   editingId = signal<string | null>(null);
@@ -56,6 +64,10 @@ export class ClientEditComponent implements OnInit {
   logoUrl = signal<string | null>(null);
   selectedLogoFile: File | null = null;
   originalLogoUrl: string | null = null;
+
+  addressSearchResults = signal<NominatimResult[]>([]);
+  isSearchingAddress = signal(false);
+  private addressSearchSubject = new Subject<string>();
 
   clientTypes = [
     'Bar',
@@ -92,6 +104,45 @@ export class ClientEditComponent implements OnInit {
       this.editingId.set(id);
       this.loadClientData(id);
     }
+    this.setupAddressAutocomplete();
+  }
+
+  private setupAddressAutocomplete(): void {
+    this.addressSearchSubject
+      .pipe(
+        debounceTime(400),
+        distinctUntilChanged(),
+        tap(() => this.isSearchingAddress.set(true)),
+        switchMap((query) => this.nominatimService.search(query, { limit: 8 })),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((results) => {
+        this.addressSearchResults.set(results);
+        this.isSearchingAddress.set(false);
+      });
+  }
+
+  onAddressInput(value: string): void {
+    if (value.length >= 3) {
+      this.addressSearchSubject.next(value);
+    } else {
+      this.addressSearchResults.set([]);
+    }
+  }
+
+  onAddressSelected(event: MatAutocompleteSelectedEvent): void {
+    const selected: NominatimResult = event.option.value;
+    this.clientForm.patchValue({
+      address: selected.display_name,
+      latitude: parseFloat(parseFloat(selected.lat).toFixed(6)),
+      longitude: parseFloat(parseFloat(selected.lon).toFixed(6)),
+    });
+    this.addressSearchResults.set([]);
+  }
+
+  displayAddress(result: NominatimResult | string): string {
+    if (typeof result === 'string') return result;
+    return result?.display_name ?? '';
   }
 
   loadClientData(id: string) {
@@ -299,11 +350,22 @@ export class ClientEditComponent implements OnInit {
     });
   }
 
-  onLocationSelected(location: any) {
+  onLocationSelected(location: { lat: number; lng: number; address?: string }) {
     this.clientForm.patchValue({
       latitude: parseFloat(location.lat.toFixed(6)),
       longitude: parseFloat(location.lng.toFixed(6)),
     });
+
+    if (location.address) {
+      this.clientForm.patchValue({ address: location.address });
+    } else {
+      this.nominatimService.reverseGeocode(location.lat, location.lng).subscribe((result) => {
+        if (result?.display_name) {
+          this.clientForm.patchValue({ address: result.display_name });
+        }
+      });
+    }
+
     this.showMapSelector.set(false);
   }
 

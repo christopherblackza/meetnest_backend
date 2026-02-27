@@ -11,6 +11,12 @@ mat-card-header {
   width: 100%;
 }
 
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
 .form-container {
   padding: 24px;
   margin-top: 24px;

@@ -3457,14 +3457,12 @@ CREATE OR REPLACE FUNCTION get_user_friends(
     display_name text,
     full_name text,
     avatar_url text,
-    location text,
     mutual_friends_count bigint
   ) LANGUAGE plpgsql SECURITY DEFINER AS $$ BEGIN RETURN QUERY
 SELECT p.user_id,
   p.display_name,
   p.full_name,
   p.avatar_url,
-  p.location,
   (
     SELECT count(*)::bigint
     FROM friends f1

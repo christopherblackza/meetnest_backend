@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, EventEmitter, inject, Input, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,8 +6,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import * as L from 'leaflet';
-import { Subject, from, of } from 'rxjs';
-import { debounceTime, distinctUntilChanged, switchMap, catchError, tap } from 'rxjs/operators';
+import { Subject, of } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap, tap } from 'rxjs/operators';
+import { NominatimService } from '../../services/nominatim.service';
 
 @Component({
   selector: 'app-map-selector',
@@ -20,9 +21,10 @@ export class MapSelectorComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('map') mapContainer!: ElementRef;
   @Input() initialLat: number = 51.505;
   @Input() initialLng: number = -0.09;
-  @Output() locationSelected = new EventEmitter<{ lat: number; lng: number }>();
+  @Output() locationSelected = new EventEmitter<{ lat: number; lng: number; address?: string }>();
   @Output() close = new EventEmitter<void>();
 
+  private nominatimService = inject(NominatimService);
   private map!: L.Map;
   private marker!: L.Marker;
   currentLat: number = 0;
@@ -32,6 +34,7 @@ export class MapSelectorComponent implements OnInit, AfterViewInit, OnDestroy {
   searchResults: any[] = [];
   isSearching: boolean = false;
   userCountryCode: string | null = null;
+  private selectedPlaceName: string | null = null;
   private searchSubject = new Subject<string>();
 
   ngOnInit(): void {
@@ -68,17 +71,12 @@ export class MapSelectorComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  private async detectCountry(lat: number, lng: number) {
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-      const data = await res.json();
-      if (data?.address?.country_code) {
-        this.userCountryCode = data.address.country_code;
-        console.log('User detected country:', this.userCountryCode);
+  private detectCountry(lat: number, lng: number): void {
+    this.nominatimService.reverseGeocode(lat, lng).subscribe((result) => {
+      if (result?.address?.['country_code']) {
+        this.userCountryCode = result.address['country_code'];
       }
-    } catch (e) {
-      console.error('Failed to detect country', e);
-    }
+    });
   }
 
   private setupSearch(): void {
@@ -90,22 +88,10 @@ export class MapSelectorComponent implements OnInit, AfterViewInit, OnDestroy {
         if (!query || query.length < 3) {
           return of([]);
         }
-        
-        let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=15`;
-        if (this.userCountryCode) {
-          url += `&countrycodes=${this.userCountryCode}`;
-        }
-        
-        console.log('Search URL:', url);
-        return from(
-          fetch(url)
-            .then(res => res.json())
-        ).pipe(
-          catchError(error => {
-            console.error('Error searching places:', error);
-            return of([]);
-          })
-        );
+        return this.nominatimService.search(query, {
+          countryCode: this.userCountryCode ?? undefined,
+          limit: 15,
+        });
       })
     ).subscribe(results => {
       this.searchResults = results;
@@ -161,13 +147,15 @@ export class MapSelectorComponent implements OnInit, AfterViewInit, OnDestroy {
         const { lat, lng } = event.target.getLatLng();
         this.currentLat = lat;
         this.currentLng = lng;
+        this.selectedPlaceName = null;
       });
-      
+
       this.map.on('click', (event: L.LeafletMouseEvent) => {
         const { lat, lng } = event.latlng;
         this.marker.setLatLng([lat, lng]);
         this.currentLat = lat;
         this.currentLng = lng;
+        this.selectedPlaceName = null;
       });
 
       // Force map resize check
@@ -185,18 +173,23 @@ export class MapSelectorComponent implements OnInit, AfterViewInit, OnDestroy {
   selectPlace(place: any) {
     const lat = parseFloat(place.lat);
     const lng = parseFloat(place.lon);
-    
+
     this.currentLat = lat;
     this.currentLng = lng;
-    
+    this.selectedPlaceName = place.display_name;
+
     this.marker.setLatLng([lat, lng]);
     this.map.setView([lat, lng], 16);
     this.searchResults = [];
-    this.searchQuery = ''; // Optional: clear search query or keep it
+    this.searchQuery = '';
   }
 
   confirmLocation(): void {
-    this.locationSelected.emit({ lat: this.currentLat, lng: this.currentLng });
+    this.locationSelected.emit({
+      lat: this.currentLat,
+      lng: this.currentLng,
+      address: this.selectedPlaceName ?? undefined,
+    });
   }
 
   ngOnDestroy(): void {

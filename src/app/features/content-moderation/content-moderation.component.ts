@@ -27,7 +27,7 @@ import { UserProfile } from '../user-management/models/user.models';
 // Use the UserReport from SupabaseService which matches the actual data structure
 type ExtendedUserReport = UserReport & { 
   reporter: UserProfile; 
-  reported_user: UserProfile; 
+reported_user: UserProfile; 
 };
 
 @Component({

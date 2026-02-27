@@ -20,4 +20,11 @@ export const CLIENTS_ROUTES: Route[] = [
         (m) => m.ClientEditComponent
       ),
   },
+  {
+    path: 'map',
+    loadComponent: () =>
+      import('./clients-map/clients-map.component').then(
+        (m) => m.ClientsMapComponent
+      ),
+  },
 ];

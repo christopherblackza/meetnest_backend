@@ -96,38 +96,61 @@
         </mat-form-field>
       </div>
 
-      <div class="form-row">
-        <mat-form-field>
-          <mat-label>Address</mat-label>
-          <input matInput formControlName="address" />
+      <div class="location-section">
+        <mat-form-field class="address-field" appearance="outline">
+          <mat-label>Search Address</mat-label>
+          <input
+            matInput
+            formControlName="address"
+            [matAutocomplete]="addressAuto"
+            (input)="onAddressInput($any($event.target).value)"
+            placeholder="Start typing an address..."
+          />
+          <mat-icon matSuffix *ngIf="isSearchingAddress()">hourglass_empty</mat-icon>
+          <mat-icon matSuffix *ngIf="!isSearchingAddress()">search</mat-icon>
+          <mat-autocomplete
+            #addressAuto="matAutocomplete"
+            [displayWith]="displayAddress"
+            (optionSelected)="onAddressSelected($event)"
+          >
+            <mat-option
+              *ngFor="let result of addressSearchResults()"
+              [value]="result"
+            >
+              <span class="autocomplete-option">
+                <mat-icon class="option-icon">location_on</mat-icon>
+                <span class="option-text">{{ result.display_name }}</span>
+              </span>
+            </mat-option>
+          </mat-autocomplete>
         </mat-form-field>
+
+        <div class="location-meta">
+          <span
+            class="coordinates-display"
+            *ngIf="clientForm.get('latitude')?.value && clientForm.get('longitude')?.value"
+          >
+            <mat-icon>pin_drop</mat-icon>
+            {{ clientForm.get('latitude')?.value }}, {{ clientForm.get('longitude')?.value }}
+          </span>
+          <button
+            type="button"
+            mat-stroked-button
+            color="primary"
+            (click)="showMapSelector.set(true)"
+            class="map-select-btn"
+          >
+            <mat-icon>map</mat-icon>
+            Select on Map
+          </button>
+        </div>
+      </div>
+
+      <div class="form-row">
         <mat-form-field>
           <mat-label>Contact Number</mat-label>
           <input matInput formControlName="contact_number" />
         </mat-form-field>
-      </div>
-
-      <div class="location-fields">
-        <div class="location-inputs">
-          <mat-form-field appearance="outline" class="location-field">
-            <mat-label>Latitude</mat-label>
-            <input matInput formControlName="latitude" required readonly />
-          </mat-form-field>
-          <mat-form-field appearance="outline" class="location-field">
-            <mat-label>Longitude</mat-label>
-            <input matInput formControlName="longitude" required readonly />
-          </mat-form-field>
-        </div>
-        <button
-          type="button"
-          mat-stroked-button
-          color="primary"
-          (click)="showMapSelector.set(true)"
-          class="map-select-btn"
-        >
-          <mat-icon>map</mat-icon>
-          Select on Map
-        </button>
       </div>
 
       <div class="form-row">

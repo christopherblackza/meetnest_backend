@@ -4,9 +4,15 @@
   <mat-card>
     <mat-card-header>
       <mat-card-title>Clients Management</mat-card-title>
-      <button mat-raised-button color="primary" routerLink="/clients/new">
-        Add New Client
-      </button>
+      <div class="header-actions">
+        <button mat-stroked-button color="primary" routerLink="/clients/map">
+          <mat-icon>map</mat-icon>
+          View Map
+        </button>
+        <button mat-raised-button color="primary" routerLink="/clients/new">
+          Add New Client
+        </button>
+      </div>
     </mat-card-header>
 
     <mat-card-content>
