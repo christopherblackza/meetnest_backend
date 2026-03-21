@@ -114,7 +114,10 @@ export class ClientEditComponent implements OnInit {
         debounceTime(400),
         distinctUntilChanged(),
         tap(() => this.isSearchingAddress.set(true)),
-        switchMap((query) => this.nominatimService.search(query, { limit: 8 })),
+        switchMap((query) => {
+          const countryCode = this.nominatimService.getDetectedCountryCode() ?? undefined;
+          return this.nominatimService.search(query, { limit: 8, countryCode });
+        }),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((results) => {
@@ -327,7 +330,9 @@ export class ClientEditComponent implements OnInit {
 
     this.isSaving.set(true);
     const formData = this.clientForm.value;
-      console.log("formData", formData)
+    if (formData.type) {
+      formData.type = formData.type.toLowerCase();
+    }
 
     let request$;
     if (this.editingId()) {

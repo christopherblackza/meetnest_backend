@@ -1,10 +1,10 @@
 export const environment = {
   production: true,
   supabase: {
-    url: 'https://kwlrkrjraajnkrlgcjao.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3bHJrcmpyYWFqbmtybGdjamFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzMzUyNDEsImV4cCI6MjA2NzkxMTI0MX0.NWlxRMHjlhXg3ueYx5cnBu_SAm4qg7VFrBCBxNzHCi0' // Replace with actual anon key
+    url: 'https://whnacaytkuruluermqum.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobmFjYXl0a3VydWx1ZXJtcXVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2ODUxMDEsImV4cCI6MjA4OTI2MTEwMX0.cyDENpvFSUHpQjGJ3JLvUdbUAui9MMGdhtPWoD0V-C8' // Replace with actual anon key
   },
-  apiUrl: 'https://kwlrkrjraajnkrlgcjao.supabase.co/rest/v1',
+  apiUrl: 'https://whnacaytkuruluermqum.supabase.co/rest/v1',
   nestApiUrl: 'https://meetnestmcp-production.up.railway.app',
   useDirectSupabase: true
 };

@@ -61,6 +61,15 @@
               ],
               "outputHashing": "all"
             },
+            "staging": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.staging.ts"
+                }
+              ],
+              "outputHashing": "all"
+            },
             "development": {
               "optimization": false,
               "extractLicenses": false,
@@ -74,6 +83,9 @@
           "configurations": {
             "production": {
               "buildTarget": "admin-dashboard:build:production"
+            },
+            "staging": {
+              "buildTarget": "admin-dashboard:build:staging"
             },
             "development": {
               "buildTarget": "admin-dashboard:build:development"

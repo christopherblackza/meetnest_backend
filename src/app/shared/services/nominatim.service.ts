@@ -22,6 +22,34 @@ export interface ReverseGeocodeResult {
 export class NominatimService {
   private readonly BASE_URL = 'https://nominatim.openstreetmap.org';
   private http = inject(HttpClient);
+  private detectedCountryCode: string | null = null;
+
+  constructor() {
+    this.detectUserCountry();
+  }
+
+  private detectUserCountry(): void {
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        this.reverseGeocode(position.coords.latitude, position.coords.longitude).subscribe(
+          (result) => {
+            if (result?.address?.['country_code']) {
+              this.detectedCountryCode = result.address['country_code'];
+            }
+          }
+        );
+      },
+      () => {
+        // Geolocation denied or unavailable — no country bias
+      }
+    );
+  }
+
+  getDetectedCountryCode(): string | null {
+    return this.detectedCountryCode;
+  }
 
   search(
     query: string,
