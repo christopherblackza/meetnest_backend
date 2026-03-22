@@ -45,6 +45,7 @@ Thumbs.db
 
 /server/.env
 /server/firebase-service-account.json
+/server/src/firebase/firebase-service-account.json
 supabase/.temp/cli-latest
 server/.env.development
 server/.env.production
