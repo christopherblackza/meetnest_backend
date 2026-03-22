@@ -3,6 +3,7 @@
 -- ============================================================================
 
 -- Helper: convert date_range text to interval
+DROP FUNCTION IF EXISTS _analytics_interval(text);
 CREATE OR REPLACE FUNCTION _analytics_interval(p_date_range text)
 RETURNS interval LANGUAGE sql IMMUTABLE AS $$
   SELECT CASE p_date_range
@@ -19,6 +20,7 @@ $$;
 -- ============================================================================
 -- GET_USER_ANALYTICS
 -- ============================================================================
+DROP FUNCTION IF EXISTS get_user_analytics(text);
 CREATE OR REPLACE FUNCTION get_user_analytics(p_date_range text DEFAULT 'month')
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
@@ -124,6 +126,7 @@ $$;
 -- ============================================================================
 -- GET_CONTENT_ANALYTICS
 -- ============================================================================
+DROP FUNCTION IF EXISTS get_content_analytics(text);
 CREATE OR REPLACE FUNCTION get_content_analytics(p_date_range text DEFAULT 'month')
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
@@ -135,8 +138,6 @@ BEGIN
   activity_counts AS (
     SELECT
       count(*) AS total_activities,
-      count(*) FILTER (WHERE type = 'meetup')  AS total_meetups,
-      count(*) FILTER (WHERE type = 'event')   AS total_events,
       count(*) FILTER (WHERE type = 'blend')   AS total_blends,
       count(*) FILTER (WHERE created_at >= v_cutoff) AS new_activities
     FROM activities
@@ -167,11 +168,9 @@ BEGIN
   daily_activities AS (
     SELECT
       d::date AS day,
-      count(a.id) FILTER (WHERE a.type = 'meetup') AS meetups,
-      count(a.id) FILTER (WHERE a.type = 'event')  AS events,
-      count(a.id) FILTER (WHERE a.type = 'blend')  AS blends
+      count(a.id) AS blends
     FROM generate_series(v_cutoff::date, now()::date, '1 day') d
-    LEFT JOIN activities a ON a.created_at::date = d::date
+    LEFT JOIN activities a ON a.created_at::date = d::date AND a.type = 'blend'
     GROUP BY d::date
     ORDER BY d::date
   ),
@@ -186,8 +185,8 @@ BEGIN
     LIMIT 5
   )
   SELECT json_build_object(
-    'total_meetups',            (SELECT total_meetups FROM activity_counts),
-    'total_events',             (SELECT total_events FROM activity_counts),
+    'total_meetups',            0,
+    'total_events',             0,
     'total_blends',             (SELECT total_blends FROM activity_counts),
     'total_chats',              (SELECT total_chats FROM chat_counts),
     'total_messages',           (SELECT total_messages FROM message_counts),
@@ -197,8 +196,6 @@ BEGIN
     'content_engagement_rate',  (SELECT engagement_rate FROM engagement),
     'daily_activity_data',      (SELECT json_agg(json_build_object(
                                   'label', to_char(day, 'Mon DD'),
-                                  'meetups', meetups,
-                                  'events', events,
                                   'blends', blends
                                 ) ORDER BY day) FROM daily_activities),
     'top_activities',           (SELECT json_agg(json_build_object(
@@ -214,6 +211,7 @@ $$;
 -- ============================================================================
 -- GET_REVENUE_ANALYTICS (placeholder — no subscription tables yet)
 -- ============================================================================
+DROP FUNCTION IF EXISTS get_revenue_analytics(text);
 CREATE OR REPLACE FUNCTION get_revenue_analytics(p_date_range text DEFAULT 'month')
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
@@ -233,8 +231,109 @@ $$;
 
 
 -- ============================================================================
+-- GET_LIVE_PULSE — real-time snapshot for the Live Pulse dashboard
+-- ============================================================================
+DROP FUNCTION IF EXISTS get_live_pulse();
+CREATE OR REPLACE FUNCTION get_live_pulse()
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_result json;
+BEGIN
+  WITH
+  -- Active users (seen in last 15 minutes) with location
+  active_users AS (
+    SELECT
+      user_id, display_name, avatar_url, latitude, longitude, current_city, current_country, last_active_at
+    FROM user_profiles
+    WHERE last_active_at >= now() - interval '15 minutes'
+      AND latitude IS NOT NULL AND longitude IS NOT NULL
+  ),
+  -- Active activities (not expired, happening now or soon)
+  active_activities AS (
+    SELECT
+      a.id, a.title, a.type, a.latitude, a.longitude, a.location_name,
+      a.created_at, a.start_date_time,
+      (SELECT count(*) FROM chats c JOIN participants p ON p.chat_id = c.id WHERE c.activity_id = a.id) AS participant_count
+    FROM activities a
+    WHERE a.latitude IS NOT NULL AND a.longitude IS NOT NULL
+      AND (a.expires_at IS NULL OR a.expires_at > now())
+      AND a.created_at >= now() - interval '7 days'
+    ORDER BY a.created_at DESC
+    LIMIT 100
+  ),
+  -- Hotspot clusters: group activities from last 7 days by rounded lat/lng
+  hotspots AS (
+    SELECT
+      round(latitude::numeric, 1) AS lat,
+      round(longitude::numeric, 1) AS lng,
+      count(*) AS activity_count,
+      count(DISTINCT created_by) AS unique_creators
+    FROM activities
+    WHERE created_at >= now() - interval '7 days'
+      AND latitude IS NOT NULL AND longitude IS NOT NULL
+    GROUP BY round(latitude::numeric, 1), round(longitude::numeric, 1)
+    HAVING count(*) >= 1
+    ORDER BY activity_count DESC
+    LIMIT 50
+  ),
+  -- Recent feed: signups, activities, friendships from last 24h
+  recent_signups AS (
+    SELECT 'signup' AS event_type, user_id AS id, display_name AS title,
+           avatar_url AS image, current_city AS subtitle, created_at
+    FROM user_profiles
+    WHERE created_at >= now() - interval '24 hours'
+    ORDER BY created_at DESC LIMIT 20
+  ),
+  recent_activities AS (
+    SELECT 'activity' AS event_type, a.id, a.title,
+           a.image_url AS image, a.type AS subtitle, a.created_at
+    FROM activities a
+    WHERE a.created_at >= now() - interval '24 hours'
+    ORDER BY a.created_at DESC LIMIT 20
+  ),
+  recent_friends AS (
+    SELECT 'connection' AS event_type, f.id,
+           u1.display_name || ' & ' || u2.display_name AS title,
+           u1.avatar_url AS image, '' AS subtitle, f.created_at
+    FROM friends f
+    JOIN user_profiles u1 ON u1.user_id = f.user_id
+    JOIN user_profiles u2 ON u2.user_id = f.friend_id
+    WHERE f.created_at >= now() - interval '24 hours'
+    ORDER BY f.created_at DESC LIMIT 20
+  ),
+  feed AS (
+    SELECT * FROM recent_signups
+    UNION ALL SELECT * FROM recent_activities
+    UNION ALL SELECT * FROM recent_friends
+    ORDER BY created_at DESC
+    LIMIT 30
+  ),
+  -- Summary counts
+  summary AS (
+    SELECT
+      (SELECT count(*) FROM user_profiles WHERE last_active_at >= now() - interval '15 minutes') AS online_now,
+      (SELECT count(*) FROM activities WHERE created_at >= now() - interval '24 hours') AS activities_today,
+      (SELECT count(*) FROM user_profiles WHERE created_at >= now() - interval '24 hours') AS signups_today,
+      (SELECT count(*) FROM friends WHERE created_at >= now() - interval '24 hours') AS connections_today,
+      (SELECT count(*) FROM messages WHERE created_at >= now() - interval '24 hours') AS messages_today
+  )
+  SELECT json_build_object(
+    'summary',    (SELECT row_to_json(summary) FROM summary),
+    'active_users', (SELECT json_agg(row_to_json(active_users)) FROM active_users),
+    'active_activities', (SELECT json_agg(row_to_json(active_activities)) FROM active_activities),
+    'hotspots',   (SELECT json_agg(row_to_json(hotspots)) FROM hotspots),
+    'feed',       (SELECT json_agg(row_to_json(feed)) FROM feed)
+  ) INTO v_result;
+
+  RETURN v_result;
+END;
+$$;
+
+
+-- ============================================================================
 -- GET_ANALYTICS_OVERVIEW (aggregates all sections into one call)
 -- ============================================================================
+DROP FUNCTION IF EXISTS get_analytics_overview(text);
 CREATE OR REPLACE FUNCTION get_analytics_overview(p_date_range text DEFAULT 'month')
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
@@ -267,8 +366,7 @@ BEGIN
   ),
   activities AS (
     SELECT
-      count(*) FILTER (WHERE type = 'meetup') AS meetups,
-      count(*) FILTER (WHERE type = 'event') AS events,
+      count(*) FILTER (WHERE type = 'blend') AS blends,
       count(*) AS total
     FROM activities
   ),
@@ -294,8 +392,9 @@ BEGIN
     'total_reports',        (SELECT total FROM reports),
     'reports_opened',       (SELECT pending FROM reports),
     'reports_resolved',     (SELECT resolved FROM reports),
-    'meetups_created',      (SELECT meetups FROM activities),
-    'events_created',       (SELECT events FROM activities),
+    'meetups_created',      0,
+    'events_created',       0,
+    'blends_created',       (SELECT blends FROM activities),
     'total_activities',     (SELECT total FROM activities),
     'total_friends',        (SELECT total FROM friends),
     'messages_period',      (SELECT total FROM messages)

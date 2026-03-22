@@ -137,14 +137,14 @@ export class AnalyticsComponent implements OnInit {
     this.contentChart = new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: ['Meetups', 'Events', 'Blends'],
+        labels: ['Blends', 'Chats', 'Messages'],
         datasets: [{
           data: [
-            this.contentAnalytics.total_meetups,
-            this.contentAnalytics.total_events,
             this.contentAnalytics.total_blends || 0,
+            this.contentAnalytics.total_chats,
+            this.contentAnalytics.total_messages || 0,
           ],
-          backgroundColor: ['#7c3aed', '#0891b2', '#f59e0b'],
+          backgroundColor: ['#f59e0b', '#7c3aed', '#6366f1'],
           borderWidth: 0,
           hoverOffset: 4,
         }]

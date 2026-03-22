@@ -1,0 +1,99 @@
+<div class="live-pulse-container">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1>Live Pulse</h1>
+      <span class="live-badge">
+        <span class="live-dot"></span>
+        LIVE
+      </span>
+      <span class="updated-label" *ngIf="lastUpdated()">
+        Updated {{ timeAgo(lastUpdated()!.toISOString()) }}
+      </span>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button (click)="refresh()" matTooltip="Refresh now">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Summary Pills -->
+  <div class="summary-row" *ngIf="data()?.summary as s">
+    <div class="pill online">
+      <mat-icon>wifi</mat-icon>
+      <span class="pill-value">{{ s.online_now }}</span>
+      <span class="pill-label">Online</span>
+    </div>
+    <div class="pill activities">
+      <mat-icon>event</mat-icon>
+      <span class="pill-value">{{ s.activities_today }}</span>
+      <span class="pill-label">Activities Today</span>
+    </div>
+    <div class="pill signups">
+      <mat-icon>person_add</mat-icon>
+      <span class="pill-value">{{ s.signups_today }}</span>
+      <span class="pill-label">Signups Today</span>
+    </div>
+    <div class="pill connections">
+      <mat-icon>handshake</mat-icon>
+      <span class="pill-value">{{ s.connections_today }}</span>
+      <span class="pill-label">Connections</span>
+    </div>
+    <div class="pill messages">
+      <mat-icon>chat</mat-icon>
+      <span class="pill-value">{{ s.messages_today }}</span>
+      <span class="pill-label">Messages</span>
+    </div>
+  </div>
+
+  <!-- Main content: Map + Feed -->
+  <div class="main-grid">
+    <!-- Map -->
+    <div class="map-section">
+      <div #mapContainer class="map-canvas"></div>
+      <div class="map-legend">
+        <div class="legend-item">
+          <span class="legend-dot user-dot"></span>
+          Active Users
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot blend-dot"></span>
+          Blends
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot hotspot-dot"></span>
+          Hotspots
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Feed -->
+    <div class="feed-section">
+      <div class="feed-header">
+        <h3>Live Feed</h3>
+        <span class="feed-count" *ngIf="data()?.feed">{{ data()!.feed!.length }} events</span>
+      </div>
+
+      <div class="feed-list" *ngIf="data()?.feed?.length; else emptyFeed">
+        <div class="feed-item" *ngFor="let item of data()!.feed" [ngClass]="getFeedColor(item.event_type)">
+          <div class="feed-icon" [ngClass]="getFeedColor(item.event_type)">
+            <mat-icon>{{ getFeedIcon(item.event_type) }}</mat-icon>
+          </div>
+          <div class="feed-content">
+            <span class="feed-title">{{ item.title || 'Untitled' }}</span>
+            <span class="feed-subtitle" *ngIf="item.subtitle">{{ item.subtitle }}</span>
+          </div>
+          <span class="feed-time">{{ timeAgo(item.created_at) }}</span>
+        </div>
+      </div>
+
+      <ng-template #emptyFeed>
+        <div class="feed-empty">
+          <mat-icon>hourglass_empty</mat-icon>
+          <span>No events in the last 24 hours</span>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+</div>

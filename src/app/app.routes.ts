@@ -58,6 +58,11 @@ export const routes: Routes = [
         canActivate: [adminGuard]
       },
       {
+        path: 'live-pulse',
+        loadComponent: () => import('./features/live-pulse/live-pulse.component').then(m => m.LivePulseComponent),
+        canActivate: [adminGuard]
+      },
+      {
         path: 'analytics',
         loadChildren: () => import('./features/analytics/analytics.routes').then(m => m.analyticsRoutes),
         canActivate: [adminGuard]

@@ -69,10 +69,10 @@
       </div>
 
       <div class="kpi-card">
-        <div class="kpi-icon activities"><mat-icon>event</mat-icon></div>
+        <div class="kpi-icon activities"><mat-icon>local_fire_department</mat-icon></div>
         <div class="kpi-info">
-          <span class="kpi-value">{{ overview.meetups_created + overview.events_created | number }}</span>
-          <span class="kpi-label">Activities</span>
+          <span class="kpi-value">{{ overview.blends_created || overview.total_activities || 0 | number }}</span>
+          <span class="kpi-label">Blends</span>
         </div>
       </div>
 
@@ -147,12 +147,8 @@
           </div>
           <div class="chart-stats" *ngIf="contentAnalytics">
             <div class="mini-stat">
-              <span class="mini-value">{{ contentAnalytics.total_meetups }}</span>
-              <span class="mini-label">Meetups</span>
-            </div>
-            <div class="mini-stat">
-              <span class="mini-value">{{ contentAnalytics.total_events }}</span>
-              <span class="mini-label">Events</span>
+              <span class="mini-value">{{ contentAnalytics.total_blends || 0 }}</span>
+              <span class="mini-label">Blends</span>
             </div>
             <div class="mini-stat">
               <span class="mini-value">{{ contentAnalytics.total_chats }}</span>

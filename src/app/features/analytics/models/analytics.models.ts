@@ -12,6 +12,7 @@ export interface AnalyticsOverview {
   reports_resolved: number;
   meetups_created: number;
   events_created: number;
+  blends_created?: number;
   total_activities?: number;
   total_friends?: number;
   messages_period?: number;
@@ -61,7 +62,7 @@ export interface ContentAnalytics {
   new_activities_period?: number;
   active_participants?: number;
   content_engagement_rate: number;
-  daily_activity_data?: { label: string; meetups: number; events: number; blends: number }[];
+  daily_activity_data?: { label: string; blends: number }[];
   top_activities?: { title: string; type: string; participants: number }[];
 }
 
