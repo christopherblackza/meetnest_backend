@@ -22,7 +22,8 @@ import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { MapSelectorComponent } from '../../../shared/components/map-selector/map-selector.component';
-import { NominatimService, NominatimResult } from '../../../shared/services/nominatim.service';
+import { NominatimService } from '../../../shared/services/nominatim.service';
+import { GooglePlacesService, PlacePrediction } from '../../../shared/services/google-places.service';
 
 @Component({
   selector: 'app-client-edit',
@@ -51,6 +52,7 @@ export class ClientEditComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private formBuilder = inject(FormBuilder);
   private nominatimService = inject(NominatimService);
+  private googlePlacesService = inject(GooglePlacesService);
   private destroyRef = inject(DestroyRef);
 
   clientForm: FormGroup;
@@ -65,7 +67,7 @@ export class ClientEditComponent implements OnInit {
   selectedLogoFile: File | null = null;
   originalLogoUrl: string | null = null;
 
-  addressSearchResults = signal<NominatimResult[]>([]);
+  addressSearchResults = signal<PlacePrediction[]>([]);
   isSearchingAddress = signal(false);
   showManualCoords = signal(false);
   private addressSearchSubject = new Subject<string>();
@@ -93,7 +95,7 @@ export class ClientEditComponent implements OnInit {
       website_url: [''],
       instagram_url: [''],
       google_maps_link: [''],
-      rating: [0],
+      rating: [5],
       image_url: [[]],
       logo_url: [''],
     });
@@ -114,10 +116,7 @@ export class ClientEditComponent implements OnInit {
         debounceTime(400),
         distinctUntilChanged(),
         tap(() => this.isSearchingAddress.set(true)),
-        switchMap((query) => {
-          const countryCode = this.nominatimService.getDetectedCountryCode() ?? undefined;
-          return this.nominatimService.search(query, { limit: 8, countryCode });
-        }),
+        switchMap((query) => this.googlePlacesService.searchPlaces(query)),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((results) => {
@@ -135,18 +134,23 @@ export class ClientEditComponent implements OnInit {
   }
 
   onAddressSelected(event: MatAutocompleteSelectedEvent): void {
-    const selected: NominatimResult = event.option.value;
-    this.clientForm.patchValue({
-      address: selected.display_name,
-      latitude: parseFloat(parseFloat(selected.lat).toFixed(6)),
-      longitude: parseFloat(parseFloat(selected.lon).toFixed(6)),
+    const selected: PlacePrediction = event.option.value;
+    this.googlePlacesService.getPlaceDetails(selected.place_id).subscribe((place) => {
+      if (place) {
+        this.clientForm.patchValue({
+          address: place.display_name,
+          latitude: parseFloat(place.lat.toFixed(6)),
+          longitude: parseFloat(place.lng.toFixed(6)),
+          google_maps_link: place.google_maps_link,
+        });
+      }
     });
     this.addressSearchResults.set([]);
   }
 
-  displayAddress(result: NominatimResult | string): string {
+  displayAddress(result: PlacePrediction | string): string {
     if (typeof result === 'string') return result;
-    return result?.display_name ?? '';
+    return result?.description ?? '';
   }
 
   loadClientData(id: string) {
@@ -357,9 +361,12 @@ export class ClientEditComponent implements OnInit {
   }
 
   onLocationSelected(location: { lat: number; lng: number; address?: string }) {
+    const lat = parseFloat(location.lat.toFixed(6));
+    const lng = parseFloat(location.lng.toFixed(6));
     this.clientForm.patchValue({
-      latitude: parseFloat(location.lat.toFixed(6)),
-      longitude: parseFloat(location.lng.toFixed(6)),
+      latitude: lat,
+      longitude: lng,
+      google_maps_link: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
     });
 
     if (location.address) {

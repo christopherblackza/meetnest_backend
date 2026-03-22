@@ -10,6 +10,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { provideNativeDateAdapter } from '@angular/material/core';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -48,6 +49,7 @@ import { MatMenuModule } from '@angular/material/menu';
     MatDialogModule,
     MatMenuModule
   ],
+  providers: [provideNativeDateAdapter()],
   templateUrl: './notifications.component.html',
   styleUrls: ['./notifications.component.scss']
 })

@@ -133,7 +133,7 @@
             >
               <span class="autocomplete-option">
                 <mat-icon class="option-icon">location_on</mat-icon>
-                <span class="option-text">{{ result.display_name }}</span>
+                <span class="option-text">{{ result.description }}</span>
               </span>
             </mat-option>
           </mat-autocomplete>
@@ -207,7 +207,8 @@
         </mat-form-field>
         <mat-form-field>
           <mat-label>Google Maps Link</mat-label>
-          <input matInput formControlName="google_maps_link" />
+          <input matInput formControlName="google_maps_link" readonly />
+          <mat-hint *ngIf="!clientForm.get('google_maps_link')?.value">Auto-generated from address</mat-hint>
         </mat-form-field>
       </div>
 

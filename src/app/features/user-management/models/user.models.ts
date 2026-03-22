@@ -2,7 +2,7 @@ export interface UserProfile {
   user_id: string;
   email: string;
   display_name: string;
-  full_name: string; // Added for template compatibility
+  full_name: string;
   avatar_url?: string;
   status: 'active' | 'suspended' | 'banned';
   role: 'user' | 'moderator' | 'admin';
@@ -11,10 +11,24 @@ export interface UserProfile {
   trust_score: number;
   created_at: string;
   updated_at: string;
-  // Optional properties used in template
   city?: string;
   country?: string;
   last_login?: string;
+  bio?: string;
+  date_of_birth?: string;
+  country_of_origin?: string;
+  current_city?: string;
+  current_country?: string;
+  mobile_number?: string;
+  instagram_handle?: string;
+  linkedin_handle?: string;
+  gender?: string;
+  auth_provider?: string;
+  verification_photo_url?: string;
+  last_active_at?: string;
+  latitude?: number;
+  longitude?: number;
+  referral_source?: string;
 }
 
 

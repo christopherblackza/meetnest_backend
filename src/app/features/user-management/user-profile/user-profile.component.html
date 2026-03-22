@@ -1,103 +1,173 @@
- <div class="user-profile-container" *ngIf="user">
-      <div class="profile-header">
-        <button mat-icon-button (click)="goBack()" class="back-button">
-          <mat-icon>arrow_back</mat-icon>
-        </button>
-        <h1>User Profile</h1>
-      </div>
-      
-      <div class="profile-content">
-        <mat-card class="profile-card">
-          <mat-card-content>
-            <div class="profile-info">
-              <div class="avatar-section">
-                <img [src]="user.avatar_url || '/assets/default-avatar.png'" 
-                     [alt]="user.full_name" class="profile-avatar">
+<div class="user-profile-container" *ngIf="user">
+  <div class="profile-header">
+    <button mat-icon-button (click)="goBack()" class="back-button">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <h1>User Profile</h1>
+  </div>
+
+  <div class="profile-content">
+    <!-- Top Card: Avatar + Basic Info -->
+    <mat-card class="profile-card">
+      <mat-card-content>
+        <div class="profile-info">
+          <div class="avatar-section">
+            <img [src]="user.avatar_url || '/assets/default-avatar.png'"
+                 [alt]="user.display_name" class="profile-avatar">
+          </div>
+
+          <div class="basic-info">
+            <h2>{{ user.display_name }}</h2>
+            <p class="full-name" *ngIf="user.full_name && user.full_name !== user.display_name">{{ user.full_name }}</p>
+            <p class="email">{{ user.email }}</p>
+            <p class="user-id">ID: {{ user.user_id }}</p>
+
+            <div class="status-chips">
+              <mat-chip [class]="'status-chip ' + user.verification_status">
+                {{ user.verification_status | titlecase }}
+              </mat-chip>
+              <mat-chip [class]="'status-chip ' + user.status">
+                {{ user.status | titlecase }}
+              </mat-chip>
+              <mat-chip [class]="'status-chip role-' + user.role">
+                {{ user.role | titlecase }}
+              </mat-chip>
+            </div>
+
+            <div class="trust-score-section">
+              <span class="trust-label">Trust Score:</span>
+              <div class="trust-score" [class]="getTrustScoreClass(user.trust_score)">
+                {{ user.trust_score }}/100
               </div>
-              
-              <div class="basic-info">
-                <h2>{{ user.full_name }}</h2>
-                <p class="email">{{ user.email }}</p>
-                <p class="user-id">ID: {{ user.user_id }}</p>
-                
-                <div class="status-chips">
-                  <mat-chip [class]="'status-chip ' + user.verification_status">
-                    {{ user.verification_status | titlecase }}
-                  </mat-chip>
-                  <mat-chip [class]="'status-chip ' + user.status">
-                    {{ user.status | titlecase }}
-                  </mat-chip>
-                </div>
-                
-                <div class="trust-score-section">
-                  <span class="trust-label">Trust Score:</span>
-                  <div class="trust-score" [class]="getTrustScoreClass(user.trust_score)">
-                    {{ user.trust_score }}/100
-                  </div>
-                </div>
-              </div>
             </div>
-          </mat-card-content>
-        </mat-card>
-        
-        <mat-tab-group class="profile-tabs">
-          <mat-tab label="Details">
-            <div class="tab-content">
-              <mat-card>
-                <mat-card-header>
-                  <mat-card-title>Account Information</mat-card-title>
-                </mat-card-header>
-                <mat-card-content>
-                  <div class="info-grid">
-                    <div class="info-item">
-                      <span class="label">Location:</span>
-                      <span class="value">
-                        <!-- {{ user.city }}{{ user.city && user.country ? ', ' : '' }}{{ user.country }} -->
-                        <!-- <span *ngIf="!user.city && !user.country" class="no-data">Not specified</span> -->
-                      </span>
-                    </div>
-                    <div class="info-item">
-                      <span class="label">Joined:</span>
-                      <span class="value">{{ user.created_at | date:'full' }}</span>
-                    </div>
-                    <div class="info-item">
-                      <span class="label">Last Login:</span>
-                      <span class="value">
-                        <!-- {{ user.last_login | date:'medium' }} -->
-                        <!-- <span *ngIf="!user.last_login" class="no-data">Never</span> -->
-                      </span>
-                    </div>
-                  </div>
-                </mat-card-content>
-              </mat-card>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Info Cards Grid -->
+    <div class="cards-grid">
+      <!-- Personal Info -->
+      <mat-card class="detail-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>person</mat-icon>
+          <mat-card-title>Personal Information</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="info-grid">
+            <div class="info-item" *ngIf="user.gender">
+              <span class="label">Gender</span>
+              <span class="value">{{ user.gender | titlecase }}</span>
             </div>
-          </mat-tab>
-          
-          <mat-tab label="Activity">
-            <div class="tab-content">
-              <mat-card>
-                <mat-card-header>
-                  <mat-card-title>Recent Activity</mat-card-title>
-                </mat-card-header>
-                <mat-card-content>
-                  <p class="coming-soon">Activity tracking coming soon...</p>
-                </mat-card-content>
-              </mat-card>
+            <div class="info-item" *ngIf="user.date_of_birth">
+              <span class="label">Date of Birth</span>
+              <span class="value">{{ user.date_of_birth | date:'mediumDate' }}</span>
             </div>
-          </mat-tab>
-          
-          <mat-tab label="Reports">
-            <div class="tab-content">
-              <mat-card>
-                <mat-card-header>
-                  <mat-card-title>Reports & Moderation</mat-card-title>
-                </mat-card-header>
-                <mat-card-content>
-                  <p class="coming-soon">Reports history coming soon...</p>
-                </mat-card-content>
-              </mat-card>
+            <div class="info-item" *ngIf="user.bio">
+              <span class="label">Bio</span>
+              <span class="value bio-text">{{ user.bio }}</span>
             </div>
-          </mat-tab>
-        </mat-tab-group>
-      </div>
+            <div class="info-item" *ngIf="user.referral_source">
+              <span class="label">Referral Source</span>
+              <span class="value">{{ user.referral_source | titlecase }}</span>
+            </div>
+            <p class="no-data" *ngIf="!user.gender && !user.date_of_birth && !user.bio">No personal info provided</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Location -->
+      <mat-card class="detail-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>location_on</mat-icon>
+          <mat-card-title>Location</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="info-grid">
+            <div class="info-item" *ngIf="user.current_city || user.current_country">
+              <span class="label">Current Location</span>
+              <span class="value">{{ user.current_city }}{{ user.current_city && user.current_country ? ', ' : '' }}{{ user.current_country }}</span>
+            </div>
+            <div class="info-item" *ngIf="user.country_of_origin">
+              <span class="label">Country of Origin</span>
+              <span class="value">{{ user.country_of_origin }}</span>
+            </div>
+            <div class="info-item" *ngIf="user.latitude && user.longitude">
+              <span class="label">Coordinates</span>
+              <span class="value">{{ user.latitude }}, {{ user.longitude }}</span>
+            </div>
+            <p class="no-data" *ngIf="!user.current_city && !user.current_country && !user.country_of_origin">No location info provided</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Contact & Social -->
+      <mat-card class="detail-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>contacts</mat-icon>
+          <mat-card-title>Contact & Social</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="info-grid">
+            <div class="info-item" *ngIf="user.mobile_number">
+              <span class="label">Mobile</span>
+              <span class="value">{{ user.mobile_number }}</span>
+            </div>
+            <div class="info-item" *ngIf="user.instagram_handle">
+              <span class="label">Instagram</span>
+              <span class="value">&#64;{{ user.instagram_handle }}</span>
+            </div>
+            <div class="info-item" *ngIf="user.linkedin_handle">
+              <span class="label">LinkedIn</span>
+              <span class="value">{{ user.linkedin_handle }}</span>
+            </div>
+            <p class="no-data" *ngIf="!user.mobile_number && !user.instagram_handle && !user.linkedin_handle">No contact info provided</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Account Info -->
+      <mat-card class="detail-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>manage_accounts</mat-icon>
+          <mat-card-title>Account</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label">Auth Provider</span>
+              <span class="value">{{ user.auth_provider || 'email' | titlecase }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Joined</span>
+              <span class="value">{{ user.created_at | date:'full' }}</span>
+            </div>
+            <div class="info-item" *ngIf="user.last_active_at">
+              <span class="label">Last Active</span>
+              <span class="value">{{ user.last_active_at | date:'medium' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Updated</span>
+              <span class="value">{{ user.updated_at | date:'medium' }}</span>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
     </div>
+
+    <!-- Verification Photo -->
+    <mat-card class="detail-card" *ngIf="user.verification_photo_url">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>verified_user</mat-icon>
+        <mat-card-title>Verification Photo</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <img [src]="user.verification_photo_url" alt="Verification photo" class="verification-photo">
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>
+
+<div class="loading-container" *ngIf="!user">
+  <p>Loading user profile...</p>
+</div>

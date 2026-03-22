@@ -6,5 +6,6 @@ export const environment = {
   },
   apiUrl: 'https://whnacaytkuruluermqum.supabase.co/rest/v1',
   nestApiUrl: 'https://meetnestmcp-production.up.railway.app',
-  useDirectSupabase: true
+  useDirectSupabase: true,
+  googleMapsApiKey: 'AIzaSyBO8qlor0PmdD_KblCFA7OM2yGhcZghctA'
 };

@@ -1,15 +1,20 @@
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { UserManagementService } from './user-management.service.base';
 import { SupabaseService } from '../../../core/services/supabase.service';
-import { Observable, from, throwError, map } from 'rxjs';
+import { Observable, from, throwError, map, catchError } from 'rxjs';
 import { DataGridOptions, DataGridResult, UserProfile, UserStats, FounderMessageDto, FounderMessageResponse } from '../models/user.models';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SupabaseUserManagementService extends UserManagementService {
 
-  constructor(private supabase: SupabaseService) {
+  constructor(
+    private supabase: SupabaseService,
+    private http: HttpClient,
+  ) {
     super();
   }
 
@@ -148,8 +153,15 @@ export class SupabaseUserManagementService extends UserManagementService {
   }
 
   sendFounderMessage(data: FounderMessageDto): Observable<FounderMessageResponse> {
-    // Insert into notifications or messages table
-    return from(Promise.resolve({ success: true, message: 'Message sent successfully', messageId: 'mock-id' }));
+    return this.http.post<FounderMessageResponse>(
+      `${environment.nestApiUrl}/notifications/founder-message`,
+      data
+    ).pipe(
+      catchError((error) => {
+        console.error('Error sending founder message:', error);
+        return throwError(() => new Error(error.message || 'Failed to send founder message'));
+      })
+    );
   }
 
   exportUsers(filters?: any): Observable<Blob> {

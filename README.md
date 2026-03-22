@@ -1,59 +1,95 @@
-# AdminDashboard
+<!-- Generate Languages -->
+flutter gen-l10n 
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.15.
+# Meetro 🌍
 
-## Development server
+**Connect. Explore. Experience.**
 
-To start a local development server, run:
+Meetro is the ultimate social companion for travelers and locals alike. Whether you're a solo backpacker looking for a dinner buddy, a local wanting to practice a new language, or a group seeking the best underground events in the city, Meetro bridges the gap between digital connection and real-world experiences.
 
-```bash
-ng serve
-```
+---
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## 🚀 What is Meetro?
 
-## Code scaffolding
+Meetro is a location-based social networking app designed to foster spontaneous connections and planned meetups. Unlike traditional dating apps or static travel guides, Meetro focuses on **activities** and **intent**. Users share what they are doing *right now* or planning to do, making it easy to find like-minded people to join in.
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+### Core Philosophy
+*   **Spontaneity:** Find people nearby who want to grab coffee, hike, or party *now*.
+*   **Safety:** Verified profiles and community-driven trust.
+*   **Global & Local:** Seamlessly blends the excitement of travel with the comfort of local knowledge.
 
-```bash
-ng generate component component-name
-```
+---
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## ✨ Key Features
 
-```bash
-ng generate --help
-```
+### 📍 Nearby Travelers & Locals
+Discover people in your immediate vicinity. Filter by interests, languages spoken, or travel dates. See who's currently in your city and who's arriving soon.
 
-## Building
+### ✈️ Trip Planning
+Planning a getaway? Create a **Trip** to let others know when you'll be in their city. Connect with locals and other travelers before you even pack your bags.
 
-To build the project run:
+### 🎬 Activities Feed
+A dynamic, visual feed of what's happening around you.
+*   **Post an Activity:** "Heading to the Jazz Bar at 9 PM, who's in?"
+*   **Join the Fun:** RSVP to public meetups and events.
+*   **Share Moments:** Upload photos and videos of your adventures.
 
-```bash
-ng build
-```
+### 💬 Real-Time Chat
+Stay connected with instant messaging.
+*   **1-on-1 Chat:** Coordinate plans privately.
+*   **Group Chats:** Automatically created for Meetups and Activities.
+*   **Smart Avatars:** Quickly see a user's country of origin or current status directly from the chat list.
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+### 🗺️ Interactive Map
+Visualize the world around you. Switch to **Map View** to see active meetups, popular hotspots, and friends' locations (with privacy controls) in real-time.
 
-## Running unit tests
+---
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+## 🛠️ Built With
 
-```bash
-ng test
-```
+Meetro is engineered for performance, scalability, and a buttery-smooth user experience using the latest mobile technologies.
 
-## Running end-to-end tests
+*   **Framework:** [Flutter](https://flutter.dev/) (Dart) - For a beautiful, native cross-platform experience.
+*   **State Management:** [BLoC / Cubit](https://pub.dev/packages/flutter_bloc) - Ensuring predictable state changes and clean architecture.
+*   **Backend Services:**
+    *   **Supabase:** For robust authentication, real-time database, and secure storage.
+    *   **Firebase:** Leveraging Cloud Messaging (FCM) for notifications and Analytics.
+*   **Maps & Location:** Google Maps Platform & Geolocator for precise location-based features.
+*   **Media:** Integrated video compression and caching for fast media loading.
+*   **Localization:** Fully localized supporting multiple languages (`flutter_gen`).
 
-For end-to-end (e2e) testing, run:
+---
 
-```bash
-ng e2e
-```
+## ❓ Frequently Asked Questions (FAQ)
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+### For Users
 
-## Additional Resources
+**Q: Is Meetro a dating app?**
+A: While you can certainly meet romantic partners on Meetro, it is primarily designed for **platonic connections**, friendships, and activity partners. Our focus is on *doing things together*.
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+**Q: Can I use Meetro if I'm not traveling?**
+A: Absolutely! "Locals" are the heartbeat of Meetro. Use it to meet travelers visiting your city, find language exchange partners, or discover new activities in your own hometown.
+
+---
+
+### For Developers / Contributors
+
+**Q: How do I run the project locally?**
+1.  Ensure you have the Flutter SDK installed (`>=3.0.0`).
+2.  Clone the repository.
+3.  Create a `.env` file in the root with your API keys (Supabase, Google Maps, Paystack).
+4.  Run `flutter pub get`.
+5.  Generate localization files: `flutter gen-l10n`.
+6.  Run `flutter run`.
+
+**Q: What is the architecture pattern?**
+A: We follow a clean architecture approach, separating **Data Layers** (Repositories, Services), **Business Logic** (BLoCs/Cubits), and **UI** (Screens, Widgets).
+
+**Q: How do I add a new language?**
+A: Add the arb file in `lib/l10n/`, update the translations, and run `flutter gen-l10n`.
+
+---
+
+*Built with ❤️ by the Meetro Team.*
+
+

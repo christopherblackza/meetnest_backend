@@ -1,39 +1,10 @@
 <div class="analytics-container">
   <!-- Header -->
-  <div class="analytics-header">
-    <h1>Analytics & Reporting</h1>
-    <div class="header-actions">
-      <button mat-raised-button color="primary" (click)="refreshData()">
-        <mat-icon>refresh</mat-icon>
-        Refresh
-      </button>
-      <button mat-stroked-button [matMenuTriggerFor]="exportMenu">
-        <mat-icon>download</mat-icon>
-        Export
-      </button>
-      <mat-menu #exportMenu="matMenu">
-        <button mat-menu-item (click)="exportData('pdf')">
-          <mat-icon>picture_as_pdf</mat-icon>
-          Export as PDF
-        </button>
-        <button mat-menu-item (click)="exportData('excel')">
-          <mat-icon>table_chart</mat-icon>
-          Export as Excel
-        </button>
-        <button mat-menu-item (click)="exportData('csv')">
-          <mat-icon>description</mat-icon>
-          Export as CSV
-        </button>
-      </mat-menu>
-    </div>
-  </div>
-
-  <!-- Filters -->
-  <mat-card class="filters-card">
-    <form [formGroup]="filterForm" class="filters-form">
-      <mat-form-field>
-        <mat-label>Date Range</mat-label>
-        <mat-select formControlName="date_range">
+  <div class="header">
+    <div class="header-left">
+      <h1>Analytics</h1>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="range-select">
+        <mat-select [formControl]="dateRangeControl">
           <mat-option value="today">Today</mat-option>
           <mat-option value="week">This Week</mat-option>
           <mat-option value="month">This Month</mat-option>
@@ -41,187 +12,184 @@
           <mat-option value="year">This Year</mat-option>
         </mat-select>
       </mat-form-field>
-
-      <mat-form-field>
-        <mat-label>Metric Type</mat-label>
-        <mat-select formControlName="metric_type">
-          <mat-option value="overview">Overview</mat-option>
-          <mat-option value="users">Users</mat-option>
-          <mat-option value="revenue">Revenue</mat-option>
-          <mat-option value="content">Content</mat-option>
-        </mat-select>
-      </mat-form-field>
-    </form>
-  </mat-card>
-
-  <!-- Loading Spinner -->
-  <div *ngIf="loading" class="loading-container">
-    <mat-spinner></mat-spinner>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button (click)="refreshData()" matTooltip="Refresh">
+        <mat-icon>refresh</mat-icon>
+      </button>
+      <button mat-stroked-button [matMenuTriggerFor]="exportMenu">
+        <mat-icon>download</mat-icon>
+        Export
+      </button>
+      <mat-menu #exportMenu="matMenu">
+        <button mat-menu-item (click)="exportData('csv')">
+          <mat-icon>description</mat-icon> CSV
+        </button>
+        <button mat-menu-item (click)="exportData('excel')">
+          <mat-icon>table_chart</mat-icon> Excel
+        </button>
+      </mat-menu>
+    </div>
   </div>
 
-  <!-- Analytics Content -->
-  <div *ngIf="!loading" class="analytics-content">
-    <!-- Overview Cards -->
-    <div class="overview-cards" *ngIf="overview">
-      <mat-card class="stat-card">
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner diameter="36"></mat-spinner>
+  </div>
+
+  <!-- Content -->
+  <div *ngIf="!loading" class="content">
+    <!-- Overview KPI Cards -->
+    <div class="kpi-grid" *ngIf="overview">
+      <div class="kpi-card">
+        <div class="kpi-icon users"><mat-icon>people</mat-icon></div>
+        <div class="kpi-info">
+          <span class="kpi-value">{{ overview.total_users | number }}</span>
+          <span class="kpi-label">Total Users</span>
+        </div>
+        <span class="kpi-badge positive" *ngIf="overview.growth_rate > 0">+{{ overview.growth_rate }}%</span>
+        <span class="kpi-badge negative" *ngIf="overview.growth_rate < 0">{{ overview.growth_rate }}%</span>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon active"><mat-icon>bolt</mat-icon></div>
+        <div class="kpi-info">
+          <span class="kpi-value">{{ overview.active_users | number }}</span>
+          <span class="kpi-label">Active Users</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon new"><mat-icon>person_add</mat-icon></div>
+        <div class="kpi-info">
+          <span class="kpi-value">{{ overview.new_users_7d | number }}</span>
+          <span class="kpi-label">New (7d)</span>
+        </div>
+        <span class="kpi-sub">{{ overview.new_users_30d | number }} in 30d</span>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon activities"><mat-icon>event</mat-icon></div>
+        <div class="kpi-info">
+          <span class="kpi-value">{{ overview.meetups_created + overview.events_created | number }}</span>
+          <span class="kpi-label">Activities</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon reports"><mat-icon>flag</mat-icon></div>
+        <div class="kpi-info">
+          <span class="kpi-value">{{ overview.total_reports | number }}</span>
+          <span class="kpi-label">Reports</span>
+        </div>
+        <span class="kpi-sub">{{ overview.reports_resolved }} resolved</span>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon messages"><mat-icon>chat</mat-icon></div>
+        <div class="kpi-info">
+          <span class="kpi-value">{{ overview.messages_period || 0 | number }}</span>
+          <span class="kpi-label">Messages</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="charts-row">
+      <!-- User Growth Chart -->
+      <mat-card class="chart-card">
+        <mat-card-header>
+          <mat-card-title>User Growth</mat-card-title>
+          <mat-card-subtitle *ngIf="userAnalytics">
+            {{ userAnalytics.user_retention_rate }}% retention
+          </mat-card-subtitle>
+        </mat-card-header>
         <mat-card-content>
-          <div class="stat-icon">
-            <mat-icon>people</mat-icon>
+          <div class="chart-wrapper">
+            <canvas id="userGrowthChart"></canvas>
           </div>
-          <div class="stat-info">
-            <h3>{{ overview.total_users | number }}</h3>
-            <p>Total Users</p>
-            <span class="growth-rate positive">+{{ overview.growth_rate }}%</span>
+          <div class="chart-stats" *ngIf="userAnalytics">
+            <div class="mini-stat">
+              <span class="mini-value">{{ userAnalytics.new_users_today }}</span>
+              <span class="mini-label">Today</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-value">{{ userAnalytics.new_users_this_week }}</span>
+              <span class="mini-label">This Week</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-value">{{ userAnalytics.new_users_this_month }}</span>
+              <span class="mini-label">This Month</span>
+            </div>
+            <div class="mini-stat highlight" *ngIf="userAnalytics.avg_hours_to_first_join">
+              <span class="mini-value">{{ formatHours(userAnalytics.avg_hours_to_first_join!) }}</span>
+              <span class="mini-label">Avg to First Join</span>
+            </div>
+            <div class="mini-stat highlight" *ngIf="userAnalytics.avg_hours_to_first_create">
+              <span class="mini-value">{{ formatHours(userAnalytics.avg_hours_to_first_create!) }}</span>
+              <span class="mini-label">Avg to First Create</span>
+            </div>
           </div>
         </mat-card-content>
       </mat-card>
 
-      <mat-card class="stat-card">
+      <!-- Content Chart -->
+      <mat-card class="chart-card">
+        <mat-card-header>
+          <mat-card-title>Content Breakdown</mat-card-title>
+          <mat-card-subtitle *ngIf="contentAnalytics">
+            {{ contentAnalytics.content_engagement_rate }}% engagement
+          </mat-card-subtitle>
+        </mat-card-header>
         <mat-card-content>
-          <div class="stat-icon">
-            <mat-icon>trending_up</mat-icon>
+          <div class="chart-wrapper">
+            <canvas id="contentChart"></canvas>
           </div>
-          <div class="stat-info">
-            <h3>{{ overview.active_users | number }}</h3>
-            <p>Active Users</p>
-            <span class="growth-rate positive">+8.2%</span>
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card class="stat-card">
-        <mat-card-content>
-          <div class="stat-icon">
-            <mat-icon>attach_money</mat-icon>
-          </div>
-          <div class="stat-info">
-            <h3>${{ overview.total_revenue | number:'1.2-2' }}</h3>
-            <p>Total Revenue</p>
-            <span class="growth-rate positive">+15.3%</span>
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card class="stat-card">
-        <mat-card-content>
-          <div class="stat-icon">
-            <mat-icon>subscriptions</mat-icon>
-          </div>
-          <div class="stat-info">
-            <h3>{{ overview.total_subscriptions | number }}</h3>
-            <p>Subscriptions</p>
-            <span class="growth-rate negative">-{{ overview.churn_rate }}%</span>
+          <div class="chart-stats" *ngIf="contentAnalytics">
+            <div class="mini-stat">
+              <span class="mini-value">{{ contentAnalytics.total_meetups }}</span>
+              <span class="mini-label">Meetups</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-value">{{ contentAnalytics.total_events }}</span>
+              <span class="mini-label">Events</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-value">{{ contentAnalytics.total_chats }}</span>
+              <span class="mini-label">Chats</span>
+            </div>
+            <div class="mini-stat" *ngIf="contentAnalytics.total_messages">
+              <span class="mini-value">{{ contentAnalytics.total_messages | number }}</span>
+              <span class="mini-label">Messages</span>
+            </div>
           </div>
         </mat-card-content>
       </mat-card>
     </div>
 
-    <!-- Charts Section -->
-    <mat-tab-group class="charts-tabs">
-      <mat-tab label="User Analytics">
-        <div class="tab-content">
-          <div class="chart-container">
-            <canvas id="userGrowthChart"></canvas>
-          </div>
-          <div class="user-stats" *ngIf="userAnalytics">
-            <mat-card>
-              <mat-card-header>
-                <mat-card-title>User Statistics</mat-card-title>
-              </mat-card-header>
-              <mat-card-content>
-                <div class="stats-grid">
-                  <div class="stat-item">
-                    <span class="label">New Users Today:</span>
-                    <span class="value">{{ userAnalytics.new_users_today }}</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="label">New Users This Week:</span>
-                    <span class="value">{{ userAnalytics.new_users_this_week }}</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="label">New Users This Month:</span>
-                    <span class="value">{{ userAnalytics.new_users_this_month }}</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="label">Retention Rate:</span>
-                    <span class="value">{{ userAnalytics.user_retention_rate }}%</span>
-                  </div>
-                </div>
-              </mat-card-content>
-            </mat-card>
-          </div>
-        </div>
-      </mat-tab>
-
-      <mat-tab label="Revenue Analytics">
-        <div class="tab-content">
-          <div class="chart-container">
-            <canvas id="revenueChart"></canvas>
-          </div>
-          <div class="revenue-stats" *ngIf="revenueAnalytics">
-            <mat-card>
-              <mat-card-header>
-                <mat-card-title>Revenue Breakdown</mat-card-title>
-              </mat-card-header>
-              <mat-card-content>
-                <div class="stats-grid">
-                  <div class="stat-item">
-                    <span class="label">Daily Revenue:</span>
-                    <span class="value">${{ revenueAnalytics.daily_revenue | number:'1.2-2' }}</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="label">Weekly Revenue:</span>
-                    <span class="value">${{ revenueAnalytics.weekly_revenue | number:'1.2-2' }}</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="label">Monthly Revenue:</span>
-                    <span class="value">${{ revenueAnalytics.monthly_revenue | number:'1.2-2' }}</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="label">Growth Rate:</span>
-                    <span class="value">{{ revenueAnalytics.revenue_growth_rate }}%</span>
-                  </div>
-                </div>
-              </mat-card-content>
-            </mat-card>
-          </div>
-        </div>
-      </mat-tab>
-
-      <mat-tab label="Content Analytics">
-        <div class="tab-content">
-          <div class="chart-container">
-            <canvas id="contentChart"></canvas>
-          </div>
-          <div class="content-stats" *ngIf="contentAnalytics">
-            <mat-card>
-              <mat-card-header>
-                <mat-card-title>Content Statistics</mat-card-title>
-              </mat-card-header>
-              <mat-card-content>
-                <div class="stats-grid">
-                  <div class="stat-item">
-                    <span class="label">Total Meetups:</span>
-                    <span class="value">{{ contentAnalytics.total_meetups }}</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="label">Total Events:</span>
-                    <span class="value">{{ contentAnalytics.total_events }}</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="label">Total Chats:</span>
-                    <span class="value">{{ contentAnalytics.total_chats }}</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="label">Engagement Rate:</span>
-                    <span class="value">{{ contentAnalytics.content_engagement_rate }}%</span>
-                  </div>
-                </div>
-              </mat-card-content>
-            </mat-card>
-          </div>
-        </div>
-      </mat-tab>
-    </mat-tab-group>
+    <!-- Top Activities -->
+    <mat-card class="top-card" *ngIf="contentAnalytics?.top_activities?.length">
+      <mat-card-header>
+        <mat-card-title>Top Activities</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <table class="simple-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Type</th>
+              <th>Participants</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let activity of contentAnalytics!.top_activities">
+              <td>{{ activity.title || 'Untitled' }}</td>
+              <td><span class="type-badge" [ngClass]="activity.type">{{ activity.type | titlecase }}</span></td>
+              <td>{{ activity.participants }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </mat-card-content>
+    </mat-card>
   </div>
 </div>

@@ -20,10 +20,10 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDividerModule } from '@angular/material/divider';
+import { Router } from '@angular/router';
 import { Observable, debounceTime, distinctUntilChanged } from 'rxjs';
 import { UserProfile, UserStats, DataGridOptions, DataGridResult, FounderMessageDto } from './models/user.models';
 import { UserManagementService } from './services/user-management.service.base';
-import { UserDetailDialogComponent } from './components/user-detail-dialog.component';
 
 interface KPICard {
   title: string;
@@ -107,7 +107,7 @@ export class UserManagementComponent implements OnInit {
     { value: 'test', label: 'Test Topic' }
   ];
 
-  displayedColumns = ['select', 'avatar', 'name', 'status', 'trustScore', 'role', 'actions'];
+  displayedColumns = ['select', 'name', 'status', 'trustScore', 'role', 'actions'];
 
   // Computed properties
   filteredUsers = computed(() => {
@@ -167,7 +167,8 @@ export class UserManagementComponent implements OnInit {
     private userService: UserManagementService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private router: Router
   ) {
     this.founderMessageForm = this.fb.group({
       topic: ['all', Validators.required],
@@ -340,18 +341,7 @@ export class UserManagementComponent implements OnInit {
 
   // User actions
   viewUserProfile(user: UserProfile) {
-    this.selectedUserProfile.set(user);
-  }
-
-  closeProfileDrawer() {
-    this.selectedUserProfile.set(null);
-  }
-
-  viewUserDetails(user: UserProfile) {
-    this.dialog.open(UserDetailDialogComponent, {
-      width: '800px',
-      data: user
-    });
+    this.router.navigate(['/users/profile', user.user_id]);
   }
 
   async updateStatus(user: UserProfile, status: 'active' | 'suspended' | 'banned') {

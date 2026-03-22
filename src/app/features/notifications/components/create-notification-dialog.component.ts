@@ -6,6 +6,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { provideNativeDateAdapter } from '@angular/material/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
@@ -27,6 +28,7 @@ import { Notification, BulkNotificationRequest } from '../models/notification.mo
     MatCheckboxModule,
     MatChipsModule
   ],
+  providers: [provideNativeDateAdapter()],
   template: `
     <h2 mat-dialog-title>{{ isEdit ? 'Edit' : 'Create' }} Notification</h2>
     

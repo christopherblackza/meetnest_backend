@@ -6,5 +6,6 @@ export const environment = {
   },
   apiUrl: 'https://rhcvzfztnldqghssquhl.supabase.co/rest/v1',
   nestApiUrl: 'http://localhost:3000',
-  useDirectSupabase: true
+  useDirectSupabase: true,
+  googleMapsApiKey: 'AIzaSyBO8qlor0PmdD_KblCFA7OM2yGhcZghctA'
 };
