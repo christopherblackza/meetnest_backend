@@ -22,7 +22,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDividerModule } from '@angular/material/divider';
 import { Router } from '@angular/router';
 import { Observable, debounceTime, distinctUntilChanged } from 'rxjs';
-import { UserProfile, UserStats, DataGridOptions, DataGridResult, FounderMessageDto } from './models/user.models';
+import { UserProfile, UserStats, DataGridOptions, DataGridResult, FounderMessageDto, FounderMessageUserDto } from './models/user.models';
 import { UserManagementService } from './services/user-management.service.base';
 
 interface KPICard {
@@ -96,7 +96,10 @@ export class UserManagementComponent implements OnInit {
 
   // Founder Message
   @ViewChild('founderMessageDialog') founderMessageDialog!: TemplateRef<any>;
+  @ViewChild('founderMessageUserDialog') founderMessageUserDialog!: TemplateRef<any>;
   founderMessageForm: FormGroup;
+  founderMessageUserForm: FormGroup;
+  messageTargetUser = signal<UserProfile | null>(null);
   founderMessageTopics = [
     { value: 'all', label: 'All Users' },
     { value: 'role_user', label: 'Role: User' },
@@ -172,6 +175,11 @@ export class UserManagementComponent implements OnInit {
   ) {
     this.founderMessageForm = this.fb.group({
       topic: ['all', Validators.required],
+      title: ['Message from Founder', Validators.required],
+      message: ['', Validators.required]
+    });
+
+    this.founderMessageUserForm = this.fb.group({
       title: ['Message from Founder', Validators.required],
       message: ['', Validators.required]
     });
@@ -466,6 +474,50 @@ export class UserManagementComponent implements OnInit {
       error: (error) => {
         console.error('Error sending founder message:', error);
         this.snackBar.open('Error sending founder message', 'Close', { duration: 3000 });
+        this.loading.set(false);
+      }
+    });
+  }
+
+  openFounderMessageUserDialog(user: UserProfile) {
+    this.messageTargetUser.set(user);
+    this.founderMessageUserForm.reset({
+      title: 'Message from Founder',
+      message: ''
+    });
+    this.dialog.open(this.founderMessageUserDialog, {
+      width: '500px',
+      disableClose: true,
+      panelClass: 'founder-message-dialog'
+    });
+  }
+
+  sendFounderMessageToUser() {
+    if (this.founderMessageUserForm.invalid) return;
+    const user = this.messageTargetUser();
+    if (!user) return;
+
+    const { title, message } = this.founderMessageUserForm.value;
+
+    this.loading.set(true);
+
+    this.userService.sendFounderMessageToUser({
+      user_id: user.user_id,
+      title,
+      my_message: message
+    }).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.snackBar.open(`Message sent to ${user.display_name}`, 'Close', { duration: 3000 });
+          this.dialog.closeAll();
+        } else {
+          this.snackBar.open(response.error || 'Failed to send message', 'Close', { duration: 3000 });
+        }
+        this.loading.set(false);
+      },
+      error: (error) => {
+        console.error('Error sending message to user:', error);
+        this.snackBar.open('Error sending message', 'Close', { duration: 3000 });
         this.loading.set(false);
       }
     });

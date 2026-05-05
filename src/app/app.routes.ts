@@ -73,6 +73,11 @@ export const routes: Routes = [
         canActivate: [ModeratorGuard]
       },
       {
+        path: 'marketing',
+        loadComponent: () => import('./features/marketing/marketing.component').then(m => m.MarketingComponent),
+        canActivate: [adminGuard]
+      },
+      {
         path: '',
         redirectTo: 'dashboard',
         pathMatch: 'full'

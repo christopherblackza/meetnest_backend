@@ -147,6 +147,10 @@
                 <mat-icon>refresh</mat-icon>
                 <span>Recalculate Trust Score</span>
               </button> -->
+              <button mat-menu-item (click)="openFounderMessageUserDialog(user)">
+                <mat-icon>send</mat-icon>
+                <span>Send Message</span>
+              </button>
               <mat-divider></mat-divider>
               <button mat-menu-item (click)="updateStatus(user, 'active')" *ngIf="user.status !== 'active'">
                 <mat-icon>check_circle</mat-icon>
@@ -225,6 +229,43 @@
     <button mat-raised-button color="primary"
             (click)="sendFounderMessage()"
             [disabled]="founderMessageForm.invalid || loading()">
+      {{loading() ? 'Sending...' : 'Send Message'}}
+    </button>
+  </mat-dialog-actions>
+</ng-template>
+
+<ng-template #founderMessageUserDialog>
+  <div class="dialog-header">
+    <h2 mat-dialog-title>Send Message to {{ messageTargetUser()?.display_name }}</h2>
+    <button mat-icon-button mat-dialog-close>
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content>
+    <div class="founder-message-info">
+      <mat-icon color="primary">person</mat-icon>
+      <p>Send a push notification directly to this user</p>
+    </div>
+
+    <form [formGroup]="founderMessageUserForm" class="founder-message-form">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Title *</mat-label>
+        <input matInput formControlName="title" placeholder="Message from Founder">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Message *</mat-label>
+        <textarea matInput formControlName="message" rows="5" placeholder="Enter your message"></textarea>
+      </mat-form-field>
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close>Cancel</button>
+    <button mat-raised-button color="primary"
+            (click)="sendFounderMessageToUser()"
+            [disabled]="founderMessageUserForm.invalid || loading()">
       {{loading() ? 'Sending...' : 'Send Message'}}
     </button>
   </mat-dialog-actions>

@@ -1,11 +1,12 @@
 import { Observable } from 'rxjs';
-import { 
-  DataGridOptions, 
-  DataGridResult, 
-  UserProfile, 
-  UserStats, 
-  FounderMessageDto, 
-  FounderMessageResponse 
+import {
+  DataGridOptions,
+  DataGridResult,
+  UserProfile,
+  UserStats,
+  FounderMessageDto,
+  FounderMessageUserDto,
+  FounderMessageResponse
 } from '../models/user.models';
 
 export abstract class UserManagementService {
@@ -17,5 +18,6 @@ export abstract class UserManagementService {
   abstract updateVerificationStatus(userId: string, status: 'verified' | 'rejected' | 'pending'): Observable<boolean>;
   abstract recalculateTrustScore(userId: string): Observable<number>;
   abstract sendFounderMessage(data: FounderMessageDto): Observable<FounderMessageResponse>;
+  abstract sendFounderMessageToUser(data: FounderMessageUserDto): Observable<FounderMessageResponse>;
   abstract exportUsers(filters?: any): Observable<Blob>;
 }

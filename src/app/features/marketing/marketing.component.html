@@ -1,0 +1,82 @@
+<div class="marketing-container">
+  <div class="page-header">
+    <h1>Marketing</h1>
+    <p class="subtitle">Manage flyers and track campaign performance</p>
+  </div>
+
+  <div class="flyer-list">
+    @for (flyer of flyers; track flyer.id) {
+      <mat-card class="flyer-card">
+        <mat-card-content>
+          <div class="flyer-row">
+            <div class="flyer-info">
+              <img [src]="flyer.image" [alt]="flyer.name" class="flyer-thumb" />
+              <div>
+                <div class="flyer-name">{{ flyer.name }}</div>
+                <div class="flyer-desc">{{ flyer.description }}</div>
+              </div>
+            </div>
+
+            <div class="flyer-stats">
+              @if (statsLoading()) {
+                <mat-spinner diameter="20"></mat-spinner>
+              } @else {
+                @if (getStats(flyer.campaign); as stats) {
+                  <div class="stat">
+                    <mat-icon class="stat-icon scan">qr_code_scanner</mat-icon>
+                    <div class="stat-detail">
+                      <span class="stat-value">{{ stats.scans }}</span>
+                      <span class="stat-label">QR Scans</span>
+                    </div>
+                  </div>
+                  <div class="stat">
+                    <mat-icon class="stat-icon ios">phone_iphone</mat-icon>
+                    <div class="stat-detail">
+                      <span class="stat-value">{{ stats.downloads_ios }}</span>
+                      <span class="stat-label">iOS</span>
+                    </div>
+                  </div>
+                  <div class="stat">
+                    <mat-icon class="stat-icon android">phone_android</mat-icon>
+                    <div class="stat-detail">
+                      <span class="stat-value">{{ stats.downloads_android }}</span>
+                      <span class="stat-label">Android</span>
+                    </div>
+                  </div>
+                  <div class="stat-divider"></div>
+                  <div class="stat">
+                    <mat-icon class="stat-icon downloads">download</mat-icon>
+                    <div class="stat-detail">
+                      <span class="stat-value">{{ stats.downloads }}</span>
+                      <span class="stat-label">Downloads</span>
+                    </div>
+                  </div>
+                  <div class="stat">
+                    <mat-icon class="stat-icon dropoff">trending_down</mat-icon>
+                    <div class="stat-detail">
+                      <span class="stat-value" [class.negative]="stats.drop_offs > 0">{{ stats.drop_offs }}</span>
+                      <span class="stat-label">Drop-offs</span>
+                    </div>
+                  </div>
+                } @else {
+                  <span class="no-stats">No data yet</span>
+                }
+              }
+            </div>
+
+            <div class="flyer-actions">
+              <button mat-stroked-button (click)="openPreview(flyer)">
+                <mat-icon>visibility</mat-icon>
+                Preview
+              </button>
+              <button mat-flat-button color="primary" (click)="openEditor(flyer)">
+                <mat-icon>edit</mat-icon>
+                Edit
+              </button>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+</div>

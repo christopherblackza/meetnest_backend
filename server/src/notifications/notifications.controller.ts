@@ -10,6 +10,7 @@ import { ActivityEdgeFunctionNotificationDto } from './dto/activity-edge-functio
 // Add this import at the top
 import { FirebaseService } from '../firebase/firebase.service';
 import { FounderMessageDto } from './dto/founder-message.dto';
+import { FounderMessageUserDto } from './dto/founder-message-user.dto';
 
 class SendNotificationDto {
   token: string;
@@ -373,5 +374,30 @@ export class NotificationsController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async sendFounderMessage(@Body() founderMessageData: FounderMessageDto) {
     return this.notificationsService.handleFounderMessage(founderMessageData);
+  }
+
+  @Post('founder-message-user')
+  @ApiOperation({
+    summary: 'Send founder message to a specific user',
+  })
+  @ApiBody({ type: FounderMessageUserDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Founder message sent to user successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        messageId: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  async sendFounderMessageToUser(
+    @Body() data: FounderMessageUserDto,
+  ) {
+    return this.notificationsService.handleFounderMessageToUser(data);
   }
 }

@@ -75,6 +75,13 @@ export interface FounderMessageDto {
   avatar_url?: string;
 }
 
+export interface FounderMessageUserDto {
+  user_id: string;
+  my_message: string;
+  title?: string;
+  avatar_url?: string;
+}
+
 export interface FounderMessageResponse {
   success: boolean;
   message: string;

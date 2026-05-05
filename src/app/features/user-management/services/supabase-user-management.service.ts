@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { UserManagementService } from './user-management.service.base';
 import { SupabaseService } from '../../../core/services/supabase.service';
 import { Observable, from, throwError, map, catchError } from 'rxjs';
-import { DataGridOptions, DataGridResult, UserProfile, UserStats, FounderMessageDto, FounderMessageResponse } from '../models/user.models';
+import { DataGridOptions, DataGridResult, UserProfile, UserStats, FounderMessageDto, FounderMessageUserDto, FounderMessageResponse } from '../models/user.models';
 import { environment } from '../../../../environments/environment';
 
 @Injectable({
@@ -160,6 +160,18 @@ export class SupabaseUserManagementService extends UserManagementService {
       catchError((error) => {
         console.error('Error sending founder message:', error);
         return throwError(() => new Error(error.message || 'Failed to send founder message'));
+      })
+    );
+  }
+
+  sendFounderMessageToUser(data: FounderMessageUserDto): Observable<FounderMessageResponse> {
+    return this.http.post<FounderMessageResponse>(
+      `${environment.nestApiUrl}/notifications/founder-message-user`,
+      data
+    ).pipe(
+      catchError((error) => {
+        console.error('Error sending message to user:', error);
+        return throwError(() => new Error(error.message || 'Failed to send message'));
       })
     );
   }

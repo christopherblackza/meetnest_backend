@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable, from, map, catchError, of, throwError } from 'rxjs';
-import { UserProfile, UserStats, DataGridOptions, DataGridResult, FounderMessageDto, FounderMessageResponse } from '../models/user.models';
+import { UserProfile, UserStats, DataGridOptions, DataGridResult, FounderMessageDto, FounderMessageUserDto, FounderMessageResponse } from '../models/user.models';
 import { UserManagementService } from './user-management.service.base';
 import { environment } from '../../../../environments/environment';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
@@ -60,6 +60,13 @@ export class NestUserManagementService extends UserManagementService {
    */
   sendFounderMessage(founderMessageData: FounderMessageDto): Observable<FounderMessageResponse> {
     return this.http.post<FounderMessageResponse>(`${environment.nestApiUrl}/notifications/founder-message`, founderMessageData)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  sendFounderMessageToUser(data: FounderMessageUserDto): Observable<FounderMessageResponse> {
+    return this.http.post<FounderMessageResponse>(`${environment.nestApiUrl}/notifications/founder-message-user`, data)
       .pipe(
         catchError(this.handleError)
       );

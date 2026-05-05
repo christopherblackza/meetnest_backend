@@ -5,6 +5,7 @@ import { DmNotificationDto } from './dto/dm-notification.dto';
 import { FriendRequestNotificationDto } from './dto/friend-request-notification.dto';
 import { ActivityJoinNotificationDto } from './dto/activity-join-notification.dto';
 import { FounderMessageDto } from './dto/founder-message.dto';
+import { FounderMessageUserDto } from './dto/founder-message-user.dto';
 import { ActivityNearbyNotificationDto } from './dto/activity-nearby-notification.dto';
 import { ActivityEdgeFunctionNotificationDto } from './dto/activity-edge-function-notification.dto';
 
@@ -582,7 +583,6 @@ export class NotificationsService {
         my_message,
         title = 'Message from Wandermundo',
         topic = 'all',
-        avatar_url,
       } = founderMessageData;
 
       if (!my_message) {
@@ -593,11 +593,13 @@ export class NotificationsService {
         };
       }
 
+      const founderProfile = await this.getFounderProfile();
+
       // Prepare notification data
       const notificationData = {
         type: 'founder_message',
         timestamp: new Date().toISOString(),
-        avatar_url: avatar_url || '',
+        avatar_url: founderProfile?.avatar_url || '',
       };
 
       this.logger.log('Sending founder message to topic', {
@@ -612,6 +614,11 @@ export class NotificationsService {
         title,
         my_message,
         notificationData,
+      );
+
+      // Insert chat messages for all matching users (fire-and-forget, don't fail on chat errors)
+      this.insertFounderChatMessagesByTopic(topic, my_message).catch((err) =>
+        this.logger.error('Error inserting chat messages for topic', err?.message),
       );
 
       if (result.success) {
@@ -637,6 +644,223 @@ export class NotificationsService {
         message: 'Internal server error',
         error: error.message,
       };
+    }
+  }
+
+  async handleFounderMessageToUser(data: FounderMessageUserDto) {
+    try {
+      this.logger.log('Processing founder message to user', {
+        user_id: data.user_id,
+      });
+
+      const {
+        user_id,
+        my_message,
+        title = 'Message from Founder',
+      } = data;
+
+      if (!my_message) {
+        return {
+          success: false,
+          message: 'Missing required parameter: my_message',
+        };
+      }
+
+      // Fetch founder profile and insert chat message in parallel
+      const [founderProfile, chatResult] = await Promise.all([
+        this.getFounderProfile(),
+        this.insertFounderChatMessage(user_id, my_message),
+      ]);
+
+      if (!chatResult.success) {
+        this.logger.warn('Failed to insert chat message, continuing with push notification', chatResult.error);
+      }
+
+      // Send push notification
+      const deviceToken =
+        await this.supabaseService.getUserDeviceToken(user_id);
+
+      if (!deviceToken) {
+        this.logger.warn(`No device token found for user ${user_id}`);
+        return {
+          success: chatResult.success,
+          message: chatResult.success
+            ? 'Message saved to chat but no push token found'
+            : 'No device token found for this user',
+          chatId: chatResult.chatId,
+        };
+      }
+
+      const notificationData = {
+        type: 'founder_message',
+        timestamp: new Date().toISOString(),
+        avatar_url: founderProfile?.avatar_url || '',
+        chat_id: chatResult.chatId || '',
+      };
+
+      const result = await this.firebaseService.sendPushNotification(
+        deviceToken,
+        title,
+        my_message,
+        notificationData,
+      );
+
+      if (result.success) {
+        this.logger.log(
+          `Founder message sent successfully to user ${user_id}`,
+        );
+        return {
+          success: true,
+          message: 'Message sent and saved to chat',
+          messageId: result.messageId,
+          chatId: chatResult.chatId,
+        };
+      } else {
+        this.logger.error('Failed to send founder message to user', result.error);
+        return {
+          success: chatResult.success,
+          message: chatResult.success
+            ? 'Message saved to chat but push notification failed'
+            : 'Failed to send message',
+          error: result.error,
+          chatId: chatResult.chatId,
+        };
+      }
+    } catch (error) {
+      this.logger.error('Error sending founder message to user', error.stack);
+      return {
+        success: false,
+        message: 'Internal server error',
+        error: error.message,
+      };
+    }
+  }
+
+  private async getFounderProfile(): Promise<{ user_id: string; display_name: string; full_name: string; avatar_url: string | null } | null> {
+    const { data, error } = await this.supabaseService.getClient()
+      .rpc('get_founder_profile')
+      .single();
+
+    if (error || !data) {
+      this.logger.error('Founder profile not found via RPC', error?.message);
+      return null;
+    }
+    return data as { user_id: string; display_name: string; full_name: string; avatar_url: string | null };
+  }
+
+  private async insertFounderChatMessagesByTopic(
+    topic: string,
+    message: string,
+  ): Promise<void> {
+    const client = this.supabaseService.getClient();
+
+    let query = client.from('user_profiles').select('user_id');
+
+    if (topic === 'all') {
+      // no filter
+    } else if (topic.startsWith('role_')) {
+      const role = topic.replace('role_', '');
+      query = query.eq('role', role);
+    } else if (topic === 'verified') {
+      query = query.not('verification_photo_url', 'is', null);
+    } else if (topic === 'premium') {
+      query = query.eq('role', 'premium');
+    } else {
+      this.logger.warn(`Unknown topic "${topic}", skipping chat inserts`);
+      return;
+    }
+
+    const { data: users, error } = await query;
+
+    if (error || !users?.length) {
+      this.logger.warn(`No users found for topic "${topic}": ${error?.message ?? 'empty'}`);
+      return;
+    }
+
+    this.logger.log(`Inserting chat messages for ${users.length} users (topic: ${topic})`);
+
+    await Promise.allSettled(
+      users.map((u) => this.insertFounderChatMessage(u.user_id, message)),
+    );
+  }
+
+  private async insertFounderChatMessage(
+    userId: string,
+    message: string,
+  ): Promise<{ success: boolean; chatId?: string; error?: string }> {
+    try {
+      const client = this.supabaseService.getClient();
+
+      const { data: systemUser, error: systemUserError } = await client
+        .from('system_users')
+        .select('system_user_id')
+        .eq('display_name', 'Christopher')
+        .limit(1)
+        .single();
+
+      if (systemUserError || !systemUser) {
+        this.logger.error('Founder system user not found', systemUserError?.message);
+        return { success: false, error: 'Founder system user not found' };
+      }
+
+      const systemUserId = systemUser.system_user_id;
+
+      // Check for existing chat between founder and user
+      const { data: existingChat } = await client
+        .from('chats')
+        .select('id, participants!inner(user_id)')
+        .eq('system_user_id', systemUserId)
+        .eq('participants.user_id', userId)
+        .limit(1)
+        .single();
+
+      let chatId: string;
+
+      if (existingChat) {
+        // Add message to existing chat
+        chatId = existingChat.id;
+        this.logger.log(`Found existing founder chat ${chatId} for user ${userId}`);
+      } else {
+        // Create new chat
+        const { data: newChat, error: chatError } = await client
+          .from('chats')
+          .insert({ chat_type: 'direct', system_user_id: systemUserId })
+          .select('id')
+          .single();
+
+        if (chatError || !newChat) {
+          this.logger.error('Failed to create chat', chatError?.message);
+          return { success: false, error: 'Failed to create chat' };
+        }
+
+        chatId = newChat.id;
+
+        // Add both participants
+        await client.from('participants').insert([
+          { chat_id: chatId, user_id: userId },
+          { chat_id: chatId, user_id: systemUserId },
+        ]);
+
+        this.logger.log(`Created new founder chat ${chatId} for user ${userId}`);
+      }
+
+      // Insert the message
+      const { error: msgError } = await client.from('messages').insert({
+        chat_id: chatId,
+        system_user_id: systemUserId,
+        message,
+        message_type: 'system',
+      });
+
+      if (msgError) {
+        this.logger.error('Failed to insert message', msgError.message);
+        return { success: false, error: 'Failed to insert message', chatId };
+      }
+
+      return { success: true, chatId };
+    } catch (error) {
+      this.logger.error('Error inserting founder chat message', error.message);
+      return { success: false, error: error.message };
     }
   }
 }
