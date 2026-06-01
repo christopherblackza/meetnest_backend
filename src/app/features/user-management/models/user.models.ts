@@ -53,6 +53,8 @@ export interface DataGridOptions {
   filters?: {
     role?: string;
     status?: string;
+    gender?: string;
+    referralSource?: string;
     verified?: boolean;
     trustScoreMin?: number;
     trustScoreMax?: number;

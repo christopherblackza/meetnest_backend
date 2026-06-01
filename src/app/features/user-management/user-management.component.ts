@@ -80,6 +80,8 @@ export class UserManagementComponent implements OnInit {
   searchControl = new FormControl('');
   statusFilter = new FormControl<string[]>([]);
   roleFilter = new FormControl<string[]>([]);
+  genderFilter = new FormControl('');
+  referralSourceFilter = new FormControl('');
   trustScoreFilter = new FormControl('');
 
   // Filters form
@@ -154,6 +156,8 @@ export class UserManagementComponent implements OnInit {
     ];
   });
 
+  hasActiveFilters = signal(false);
+
   allSelected = computed(() => {
     const filtered = this.filteredUsers();
     const selected = this.selectedUsers();
@@ -210,6 +214,14 @@ export class UserManagementComponent implements OnInit {
         this.currentPage.set(0);
         this.loadUsers();
     });
+    this.genderFilter.valueChanges.subscribe(() => {
+        this.currentPage.set(0);
+        this.loadUsers();
+    });
+    this.referralSourceFilter.valueChanges.subscribe(() => {
+        this.currentPage.set(0);
+        this.loadUsers();
+    });
     this.trustScoreFilter.valueChanges.subscribe(() => {
         this.currentPage.set(0);
         this.loadUsers();
@@ -219,7 +231,15 @@ export class UserManagementComponent implements OnInit {
   
   async loadUsers() {
     this.loading.set(true);
-    
+    this.hasActiveFilters.set(!!(
+      this.searchControl.value ||
+      this.statusFilter.value?.length ||
+      this.roleFilter.value?.length ||
+      this.genderFilter.value ||
+      this.referralSourceFilter.value ||
+      this.trustScoreFilter.value
+    ));
+
     try {
       const options: DataGridOptions = {
         page: this.currentPage(),
@@ -230,6 +250,8 @@ export class UserManagementComponent implements OnInit {
         filters: {
           role: this.roleFilter.value?.[0] || undefined,
           status: this.statusFilter.value?.[0] || undefined,
+          gender: this.genderFilter.value || undefined,
+          referralSource: this.referralSourceFilter.value || undefined,
           trustScoreMin: this.getTrustScoreMin(this.trustScoreFilter.value),
           trustScoreMax: this.getTrustScoreMax(this.trustScoreFilter.value),
           dateFrom: undefined,
@@ -315,8 +337,11 @@ export class UserManagementComponent implements OnInit {
     this.searchControl.reset();
     this.statusFilter.reset();
     this.roleFilter.reset();
+    this.genderFilter.reset();
+    this.referralSourceFilter.reset();
     this.trustScoreFilter.reset();
     this.filtersForm.reset();
+    this.hasActiveFilters.set(false);
     this.currentPage.set(0);
     this.loadUsers();
   }
@@ -530,6 +555,8 @@ export class UserManagementComponent implements OnInit {
       const filters = {
           role: this.roleFilter.value?.[0] || undefined,
           status: this.statusFilter.value?.[0] || undefined,
+          gender: this.genderFilter.value || undefined,
+          referralSource: this.referralSourceFilter.value || undefined,
           trustScoreMin: this.getTrustScoreMin(this.trustScoreFilter.value),
           trustScoreMax: this.getTrustScoreMax(this.trustScoreFilter.value)
       };

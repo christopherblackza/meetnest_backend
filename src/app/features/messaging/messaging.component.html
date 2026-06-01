@@ -140,7 +140,7 @@
                 <td mat-cell *matCellDef="let message">
                   <div class="message-content">
                     <div class="message-text">
-                      {{ message.content | slice:0:100 }}{{ message.content?.length > 100 ? '...' : '' }}
+                      {{ message.message | slice:0:100 }}{{ message.message?.length > 100 ? '...' : '' }}
                     </div>
                     <div class="message-meta">
                       <mat-chip [class]="getMessageTypeClass(message.message_type)">
@@ -170,9 +170,8 @@
                 <th mat-header-cell *matHeaderCellDef>Chat Info</th>
                 <td mat-cell *matCellDef="let message">
                   <div class="chat-info">
-                    <div class="chat-title">{{ message.chat_info?.name || 'Direct Message' }}</div>
-                    <mat-chip [class]="getChatTypeClass(message.chat_info?.type)">
-                      {{ message.chat_info?.type || 'direct' }}
+                    <mat-chip [class]="getChatTypeClass(message.chat_info?.chat_type)">
+                      {{ message.chat_info?.chat_type || 'direct' }}
                     </mat-chip>
                   </div>
                 </td>

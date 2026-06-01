@@ -18,7 +18,7 @@ import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { SupabaseService, ChatMessage, DataGridOptions, DataGridResult } from '../../core/services/supabase.service';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import {MatDividerModule} from '@angular/material/divider';
 import { UserProfile } from '../user-management/models/user.models';
 
@@ -27,8 +27,7 @@ interface ChatMessageWithDetails extends ChatMessage {
   sender_profile: UserProfile;
   chat_info: {
     id: string;
-    type: 'event' | 'meetup' | 'direct';
-    name?: string;
+    chat_type: string;
   };
   reports_count: number;
 }
@@ -62,6 +61,7 @@ interface ChatMessageWithDetails extends ChatMessage {
 export class MessagingComponent implements OnInit {
   private supabaseService = inject(SupabaseService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
 
@@ -84,11 +84,8 @@ export class MessagingComponent implements OnInit {
   );
   
   todayMessages = computed(() => {
-    const today = new Date().toDateString();
-    return this.messages().filter(m => {
-      const messageDate = new Date(m.created_at).toDateString();
-      return messageDate === today;
-    }).length;
+    const since = Date.now() - 24 * 60 * 60 * 1000;
+    return this.messages().filter(m => new Date(m.created_at).getTime() >= since).length;
   });
 
   // Form
@@ -104,8 +101,17 @@ export class MessagingComponent implements OnInit {
   displayedColumns = ['content', 'sender', 'chatInfo', 'timestamp', 'reports', 'actions'];
 
   ngOnInit() {
+    // Pre-populate filters from query params (e.g. navigating from live-pulse)
+    const params = this.route.snapshot.queryParamMap;
+    if (params.get('dateFrom')) {
+      this.filtersForm.patchValue({ startDate: new Date(params.get('dateFrom')!) }, { emitEvent: false });
+    }
+    if (params.get('dateTo')) {
+      this.filtersForm.patchValue({ endDate: new Date(params.get('dateTo')!) }, { emitEvent: false });
+    }
+
     this.loadMessages();
-    
+
     // Auto-apply filters on form changes with debounce
     this.filtersForm.valueChanges.subscribe(() => {
       setTimeout(() => this.applyFilters(), 300);
@@ -198,7 +204,7 @@ export class MessagingComponent implements OnInit {
         }
       };
 
-      const csvData = await this.supabaseService.exportToCSV('chat_messages', options);
+      const csvData = await this.supabaseService.exportToCSV('messages', options);
       
       // Create and download CSV file
       const blob = new Blob([csvData], { type: 'text/csv' });
@@ -220,14 +226,14 @@ export class MessagingComponent implements OnInit {
 
   viewMessage(message: ChatMessageWithDetails) {
     // Navigate to message details or open dialog
-    this.snackBar.open(`Viewing message: ${message.content.slice(0, 50)}...`, 'Close', { duration: 3000 });
+    this.snackBar.open(`Viewing message: ${message.message.slice(0, 50)}...`, 'Close', { duration: 3000 });
   }
 
   async approveMessage(message: ChatMessageWithDetails) {
     try {
       // Update message status to approved/active
       const { error } = await this.supabaseService.client
-        .from('chat_messages')
+        .from('messages')
         .update({ status: 'active' })
         .eq('id', message.id);
 
@@ -245,7 +251,7 @@ export class MessagingComponent implements OnInit {
     try {
       // Update message status to flagged
       const { error } = await this.supabaseService.client
-        .from('chat_messages')
+        .from('messages')
         .update({ status: 'flagged' })
         .eq('id', message.id);
 
@@ -265,7 +271,7 @@ export class MessagingComponent implements OnInit {
       const { error } = await this.supabaseService.client
         .from('moderation_actions')
         .insert({
-          user_id: message.sender_id,
+          user_id: message.user_id,
           admin_id: this.supabaseService.user?.id,
           action_type: 'warning',
           reason: 'Inappropriate message content'
@@ -287,7 +293,7 @@ export class MessagingComponent implements OnInit {
       try {
         // Update message status to deleted
         const { error } = await this.supabaseService.client
-          .from('chat_messages')
+          .from('messages')
           .update({ status: 'deleted' })
           .eq('id', message.id);
 

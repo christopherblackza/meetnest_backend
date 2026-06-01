@@ -342,7 +342,7 @@ export class TravelSocialComponent implements OnInit {
           filename = `meetups_${new Date().toISOString().split('T')[0]}.csv`;
           break;
         case 'chats':
-          csvData = await this.supabaseService.exportToCSV('chat_messages', options);
+          csvData = await this.supabaseService.exportToCSV('messages', options);
           filename = `chats_${new Date().toISOString().split('T')[0]}.csv`;
           break;
         default:

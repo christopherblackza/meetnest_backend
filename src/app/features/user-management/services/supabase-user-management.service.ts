@@ -31,7 +31,14 @@ export class SupabaseUserManagementService extends UserManagementService {
     if (options.filters) {
       if (options.filters.status) query = query.eq('status', options.filters.status);
       if (options.filters.role) query = query.eq('role', options.filters.role);
-      // Add other filters as needed
+      if (options.filters.gender) query = query.eq('gender', options.filters.gender);
+      if (options.filters.referralSource) {
+        if (options.filters.referralSource === 'none') {
+          query = query.is('referral_source', null);
+        } else {
+          query = query.eq('referral_source', options.filters.referralSource);
+        }
+      }
     }
 
     // Pagination

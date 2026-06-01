@@ -54,6 +54,32 @@
           </mat-select>
         </mat-form-field>
 
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Gender</mat-label>
+          <mat-select [formControl]="genderFilter">
+            <mat-option value="">All</mat-option>
+            <mat-option value="Male">Male</mat-option>
+            <mat-option value="Female">Female</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Referral Source</mat-label>
+          <mat-select [formControl]="referralSourceFilter">
+            <mat-option value="">All</mat-option>
+            <mat-option value="none">None</mat-option>
+            <mat-option value="google">Google</mat-option>
+            <mat-option value="instagram">Instagram</mat-option>
+            <mat-option value="tiktok">TikTok</mat-option>
+            <mat-option value="youtube">YouTube</mat-option>
+            <mat-option value="facebook">Facebook</mat-option>
+            <mat-option value="twitter">Twitter</mat-option>
+            <mat-option value="friend_family">Friend / Family</mat-option>
+            <mat-option value="app_store">App Store</mat-option>
+            <mat-option value="other">Other</mat-option>
+          </mat-select>
+        </mat-form-field>
+
         <button mat-icon-button (click)="clearFilters()" matTooltip="Clear filters">
           <mat-icon>filter_list_off</mat-icon>
         </button>
@@ -66,6 +92,11 @@
           (change)="toggleAll($event.checked)">
           All
         </mat-checkbox>
+      </div>
+
+      <div class="filter-results" *ngIf="hasActiveFilters()">
+        <mat-icon>info_outline</mat-icon>
+        <span>{{ totalUsers() | number }} {{ totalUsers() === 1 ? 'user' : 'users' }} match your filters</span>
       </div>
 
       <table mat-table [dataSource]="users()" class="users-table" matSort (matSortChange)="onSortChange($event)">

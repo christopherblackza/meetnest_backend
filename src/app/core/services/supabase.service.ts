@@ -99,8 +99,8 @@ export interface ModerationAction {
 export interface ChatMessage {
   id: string;
   chat_id: string;
-  sender_id: string;
-  content: string;
+  user_id: string;
+  message: string;
   created_at: string;
   sender_profile?: UserProfile;
 }
@@ -789,19 +789,18 @@ export class SupabaseService {
       }
     >
   > {
-    let query = this.supabase.from('chat_messages').select(
+    let query = this.supabase.from('messages').select(
       `
         *,
-        sender_profile:user_profiles!chat_messages_sender_id_fkey(user_id, display_name, email),
-        chat_info:chats!chat_messages_chat_id_fkey(id, type, name),
-        reports_count:message_reports(count)
+        sender_profile:user_profiles!messages_user_id_fkey(user_id, display_name, email),
+        chat_info:chats!messages_chat_id_fkey(id, chat_type)
       `,
       { count: 'exact' },
-    );
+    ).is('system_user_id', null);
 
     // Apply search
     if (options.search) {
-      query = query.ilike('content', `%${options.search}%`);
+      query = query.ilike('message', `%${options.search}%`);
     }
 
     // Apply filters
@@ -812,7 +811,7 @@ export class SupabaseService {
       query = query.eq('message_type', options.filters['messageType']);
     }
     if (options.filters?.['chatType']) {
-      query = query.eq('chat_info.type', options.filters['chatType']);
+      query = query.eq('chat_info.chat_type', options.filters['chatType']);
     }
     if (options.filters?.['dateFrom']) {
       query = query.gte('created_at', options.filters['dateFrom']);

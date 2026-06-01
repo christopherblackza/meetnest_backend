@@ -1,10 +1,17 @@
 import { Component, OnInit, OnDestroy, inject, signal, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { SupabaseService } from '../../core/services/supabase.service';
 import * as L from 'leaflet';
 
@@ -22,6 +29,32 @@ export interface LivePulseData {
   feed: FeedItem[] | null;
 }
 
+export interface AdventureTemplate {
+  id: string;
+  city: string;
+  title: string;
+  description: string;
+  emoji: string;
+  activity_type: string;
+  intent: string;
+  latitude: number;
+  longitude: number;
+  radius_meters: number;
+  suggested_duration_minutes: number;
+  suggested_time_label: string;
+  min_group_size: number;
+  max_participants: number;
+  solo_xp: number;
+  host_create_xp: number;
+  attendance_xp: number;
+  group_bonus_xp: number;
+  badge_name: string | null;
+  badge_icon: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
 export interface FeedItem {
   event_type: 'signup' | 'activity' | 'connection';
   id: string;
@@ -36,25 +69,44 @@ export interface FeedItem {
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
+    RouterModule,
     MatCardModule,
     MatIconModule,
     MatButtonModule,
     MatTooltipModule,
     MatProgressSpinnerModule,
+    MatInputModule,
+    MatFormFieldModule,
+    MatSelectModule,
+    MatSlideToggleModule,
+    MatSnackBarModule,
   ],
   templateUrl: './live-pulse.component.html',
   styleUrls: ['./live-pulse.component.scss']
 })
 export class LivePulseComponent implements OnInit, OnDestroy {
   private supabase = inject(SupabaseService);
+  private router = inject(Router);
 
   data = signal<LivePulseData | null>(null);
   loading = signal(true);
   lastUpdated = signal<Date | null>(null);
 
+  templates = signal<AdventureTemplate[]>([]);
+  selectedTemplate = signal<AdventureTemplate | null>(null);
+  editDraft = signal<AdventureTemplate | null>(null);
+  saving = signal(false);
+  moveMode = signal(false);
+
+  readonly intentOptions = ['active', 'explore', 'social', 'chill', 'romantic', 'cultural', 'foodie'];
+  readonly activityTypeOptions = ['blend', 'solo', 'group'];
+
   private map: L.Map | null = null;
   private markersLayer = L.layerGroup();
   private hotspotsLayer = L.layerGroup();
+  private templatesLayer = L.layerGroup();
+  private templateMarkers = new Map<string, L.Marker>();
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
 
   @ViewChild('mapContainer', { static: true }) mapContainer!: ElementRef;
@@ -62,7 +114,7 @@ export class LivePulseComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.initMap();
     this.loadData();
-    // Auto-refresh every 30 seconds
+    this.loadTemplates();
     this.refreshInterval = setInterval(() => this.loadData(), 30000);
   }
 
@@ -81,13 +133,14 @@ export class LivePulseComponent implements OnInit, OnDestroy {
       maxBoundsViscosity: 1.0,
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       subdomains: 'abcd',
       maxZoom: 19,
     }).addTo(this.map);
 
     this.markersLayer.addTo(this.map);
     this.hotspotsLayer.addTo(this.map);
+    this.templatesLayer.addTo(this.map);
   }
 
   async loadData() {
@@ -103,6 +156,139 @@ export class LivePulseComponent implements OnInit, OnDestroy {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  async loadTemplates() {
+    const { data, error } = await this.supabase.client
+      .from('adventure_templates')
+      .select('*')
+      .order('sort_order');
+    if (error) { console.error('Error loading templates:', error); return; }
+    this.templates.set((data as AdventureTemplate[]) || []);
+    this.renderTemplates();
+  }
+
+  private renderTemplates() {
+    if (!this.map) return;
+    this.templatesLayer.clearLayers();
+    this.templateMarkers.clear();
+
+    this.templates().forEach(t => {
+      const icon = L.divIcon({
+        html: `<div class="adventure-marker ${t.is_active ? 'active' : 'inactive'}">${t.emoji}</div>`,
+        className: '',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+      });
+
+      const marker = L.marker([t.latitude, t.longitude], { icon, draggable: false });
+
+      const circle = L.circle([t.latitude, t.longitude], {
+        radius: t.radius_meters,
+        color: '#f97316',
+        fillColor: '#f97316',
+        weight: 1.5,
+        fillOpacity: 0.08,
+        dashArray: '4 4',
+      });
+
+      marker.bindTooltip(`${t.emoji} ${t.title}`, { direction: 'top', offset: [0, -22] });
+
+      marker.on('click', () => {
+        if (this.moveMode()) return;
+        this.map?.flyTo([t.latitude, t.longitude], 13, { duration: 0.8 });
+        this.openEdit(t);
+      });
+
+      marker.on('dragstart', () => {
+        circle.setStyle({ fillOpacity: 0.18 });
+        marker.closeTooltip();
+      });
+
+      marker.on('drag', (e: L.LeafletEvent) => {
+        const { lat, lng } = (e as L.LeafletMouseEvent).latlng;
+        circle.setLatLng([lat, lng]);
+      });
+
+      marker.on('dragend', async (e: L.LeafletEvent) => {
+        const { lat, lng } = (e.target as L.Marker).getLatLng();
+        circle.setLatLng([lat, lng]);
+        circle.setStyle({ fillOpacity: 0.08 });
+        await this.savePosition(t.id, lat, lng);
+        this.templates.update(list =>
+          list.map(item => item.id === t.id ? { ...item, latitude: lat, longitude: lng } : item)
+        );
+        if (this.selectedTemplate()?.id === t.id) {
+          this.selectedTemplate.update(s => s ? { ...s, latitude: lat, longitude: lng } : s);
+          this.editDraft.update(d => d ? { ...d, latitude: lat, longitude: lng } : d);
+        }
+      });
+
+      this.templateMarkers.set(t.id, marker);
+      this.templatesLayer.addLayer(circle);
+      this.templatesLayer.addLayer(marker);
+    });
+
+    this.applyMoveMode();
+  }
+
+  toggleMoveMode() {
+    this.moveMode.update(v => !v);
+    this.applyMoveMode();
+    if (this.moveMode()) this.closeEdit();
+  }
+
+  private applyMoveMode() {
+    const enabled = this.moveMode();
+    this.templateMarkers.forEach(marker => {
+      if (enabled) {
+        marker.dragging?.enable();
+      } else {
+        marker.dragging?.disable();
+      }
+    });
+    const canvas = this.mapContainer?.nativeElement as HTMLElement | undefined;
+    if (canvas) {
+      canvas.classList.toggle('move-mode', enabled);
+    }
+  }
+
+  private async savePosition(id: string, lat: number, lng: number) {
+    const { error } = await this.supabase.client
+      .from('adventure_templates')
+      .update({ latitude: lat, longitude: lng })
+      .eq('id', id);
+    if (error) console.error('Failed to save position:', error);
+  }
+
+  openEdit(template: AdventureTemplate) {
+    this.selectedTemplate.set(template);
+    this.editDraft.set({ ...template });
+  }
+
+  closeEdit() {
+    this.selectedTemplate.set(null);
+    this.editDraft.set(null);
+  }
+
+  updateDraft(field: keyof AdventureTemplate, value: unknown) {
+    this.editDraft.update(d => d ? { ...d, [field]: value } : d);
+  }
+
+  async saveEdit() {
+    const draft = this.editDraft();
+    if (!draft) return;
+    this.saving.set(true);
+    const { id, created_at, ...fields } = draft;
+    const { error } = await this.supabase.client
+      .from('adventure_templates')
+      .update(fields)
+      .eq('id', id);
+    this.saving.set(false);
+    if (error) { console.error('Save failed:', error); return; }
+    this.templates.update(list => list.map(t => t.id === id ? { ...draft } : t));
+    this.selectedTemplate.set({ ...draft });
+    this.renderTemplates();
   }
 
   private updateMap() {
@@ -189,5 +375,10 @@ export class LivePulseComponent implements OnInit, OnDestroy {
   refresh() {
     this.loading.set(true);
     this.loadData();
+  }
+
+  goToMessages() {
+    const dateFrom = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    this.router.navigate(['/messaging'], { queryParams: { dateFrom } });
   }
 }

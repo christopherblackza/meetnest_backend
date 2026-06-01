@@ -102,6 +102,22 @@
   }
 }
 
+.filter-results {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px 10px;
+  font-size: 13px;
+  color: #666;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: #999;
+  }
+}
+
 // Table
 .users-table {
   width: 100%;
@@ -339,33 +355,113 @@
     padding: 12px;
   }
 
+  // Header stacks vertically
   .header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 10px;
+    margin-bottom: 12px;
 
     .header-left {
       flex-direction: column;
       align-items: flex-start;
-      gap: 8px;
+      gap: 6px;
+      width: 100%;
+
+      h1 {
+        font-size: 20px;
+      }
     }
 
     .header-actions {
       width: 100%;
       flex-wrap: wrap;
+      gap: 8px;
+
+      button {
+        flex: 1;
+        min-width: 0;
+        justify-content: center;
+      }
     }
   }
 
+  // KPIs in a 2×2 grid
   .kpi-row {
-    flex-wrap: wrap;
-    gap: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 16px;
+
+    .kpi-divider {
+      display: none;
+    }
   }
 
+  .kpi {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+
+    .kpi-value { font-size: 18px; }
+    .kpi-label { font-size: 11px; }
+  }
+
+  // Toolbar wraps into a compact grid
   .toolbar {
+    flex-wrap: wrap;
+    padding: 4px 0 6px;
+
     .search-field {
-      min-width: unset;
-      max-width: unset;
+      width: 100%;
       flex: 1 1 100%;
     }
+
+    // Each filter dropdown takes half the row
+    mat-form-field:not(.search-field) {
+      flex: 1 1 calc(50% - 4px);
+      min-width: 0;
+    }
+
+    // Clear button and checkbox sit on their own row at the end
+    button[mat-icon-button] {
+      margin-left: auto;
+    }
+
+    .spacer {
+      display: none;
+    }
+  }
+
+  // Table: hide less-critical columns, enable scroll fallback
+  .table-card {
+    overflow: hidden;
+  }
+
+  .mat-mdc-table-sticky-border-elem-right,
+  .users-table {
+    .mat-column-trustScore {
+      display: none;
+    }
+    .mat-column-role {
+      display: none;
+    }
+  }
+
+  // Tighten cell padding
+  .users-table {
+    th.mat-mdc-header-cell,
+    td.mat-mdc-cell {
+      padding: 6px 8px;
+    }
+
+    .mat-column-select {
+      padding-left: 8px;
+    }
+  }
+
+  // Dialog form min-width can't be fixed on small screens
+  .founder-message-form {
+    min-width: unset;
+    width: 100%;
   }
 }

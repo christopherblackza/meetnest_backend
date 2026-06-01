@@ -51,3 +51,4 @@ server/.env.development
 server/.env.production
 server/.env.staging
 server/.envOld.staging
+/.agents

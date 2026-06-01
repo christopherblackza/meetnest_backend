@@ -315,7 +315,7 @@ BEGIN
       (SELECT count(*) FROM activities WHERE created_at >= now() - interval '24 hours') AS activities_today,
       (SELECT count(*) FROM user_profiles WHERE created_at >= now() - interval '24 hours') AS signups_today,
       (SELECT count(*) FROM friends WHERE created_at >= now() - interval '24 hours') AS connections_today,
-      (SELECT count(*) FROM messages WHERE created_at >= now() - interval '24 hours') AS messages_today
+      (SELECT count(*) FROM messages WHERE created_at >= now() - interval '24 hours' AND system_user_id IS NULL) AS messages_today
   )
   SELECT json_build_object(
     'summary',    (SELECT row_to_json(summary) FROM summary),
@@ -374,7 +374,7 @@ BEGIN
     SELECT count(*) AS total FROM friends
   ),
   messages AS (
-    SELECT count(*) AS total FROM messages WHERE created_at >= v_cutoff
+    SELECT count(*) AS total FROM messages WHERE created_at >= v_cutoff AND system_user_id IS NULL
   )
   SELECT json_build_object(
     'total_users',          (SELECT total FROM users),

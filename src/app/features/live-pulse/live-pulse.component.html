@@ -1,4 +1,4 @@
-<div class="live-pulse-container">
+<div class="live-pulse-container" [class.panel-open]="selectedTemplate()">
   <!-- Header -->
   <div class="header">
     <div class="header-left">
@@ -40,7 +40,7 @@
       <span class="pill-value">{{ s.connections_today }}</span>
       <span class="pill-label">Connections</span>
     </div>
-    <div class="pill messages">
+    <div class="pill messages clickable" (click)="goToMessages()" matTooltip="View today's messages">
       <mat-icon>chat</mat-icon>
       <span class="pill-value">{{ s.messages_today }}</span>
       <span class="pill-label">Messages</span>
@@ -52,6 +52,17 @@
     <!-- Map -->
     <div class="map-section">
       <div #mapContainer class="map-canvas"></div>
+      <div class="map-controls">
+        <button
+          class="move-mode-btn"
+          [class.active]="moveMode()"
+          (click)="toggleMoveMode()"
+          [matTooltip]="moveMode() ? 'Exit move mode' : 'Move adventure markers'"
+          matTooltipPosition="left">
+          <mat-icon>{{ moveMode() ? 'lock_open' : 'open_with' }}</mat-icon>
+          <span>{{ moveMode() ? 'Move Mode ON' : 'Move Markers' }}</span>
+        </button>
+      </div>
       <div class="map-legend">
         <div class="legend-item">
           <span class="legend-dot user-dot"></span>
@@ -64,6 +75,10 @@
         <div class="legend-item">
           <span class="legend-dot hotspot-dot"></span>
           Hotspots
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot adventure-dot"></span>
+          Adventures ({{ templates().length }})
         </div>
       </div>
     </div>
@@ -95,5 +110,154 @@
         </div>
       </ng-template>
     </div>
+  </div>
+</div>
+
+<!-- Adventure Template Edit Panel -->
+<div class="edit-panel" [class.open]="selectedTemplate()" *ngIf="editDraft() as draft">
+  <div class="edit-panel-header">
+    <div class="edit-panel-title">
+      <span class="edit-emoji">{{ draft.emoji }}</span>
+      <span>Edit Adventure Template</span>
+    </div>
+    <button mat-icon-button (click)="closeEdit()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="edit-panel-body">
+
+    <div class="edit-section-label">Basic Info</div>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Title</mat-label>
+      <input matInput [value]="draft.title" (input)="updateDraft('title', $any($event.target).value)">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Emoji</mat-label>
+      <input matInput [value]="draft.emoji" (input)="updateDraft('emoji', $any($event.target).value)" maxlength="4">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Description</mat-label>
+      <textarea matInput rows="3" [value]="draft.description" (input)="updateDraft('description', $any($event.target).value)"></textarea>
+    </mat-form-field>
+
+    <div class="edit-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Activity Type</mat-label>
+        <mat-select [value]="draft.activity_type" (selectionChange)="updateDraft('activity_type', $event.value)">
+          <mat-option *ngFor="let opt of activityTypeOptions" [value]="opt">{{ opt }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Intent</mat-label>
+        <mat-select [value]="draft.intent" (selectionChange)="updateDraft('intent', $event.value)">
+          <mat-option *ngFor="let opt of intentOptions" [value]="opt">{{ opt }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <div class="edit-section-label">Location</div>
+
+    <div class="edit-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Latitude</mat-label>
+        <input matInput type="number" [value]="draft.latitude" (change)="updateDraft('latitude', +$any($event.target).value)" step="0.0001">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Longitude</mat-label>
+        <input matInput type="number" [value]="draft.longitude" (change)="updateDraft('longitude', +$any($event.target).value)" step="0.0001">
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Radius (meters)</mat-label>
+      <input matInput type="number" [value]="draft.radius_meters" (change)="updateDraft('radius_meters', +$any($event.target).value)">
+    </mat-form-field>
+
+    <div class="edit-section-label">Group & Timing</div>
+
+    <div class="edit-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Min Group Size</mat-label>
+        <input matInput type="number" [value]="draft.min_group_size" (change)="updateDraft('min_group_size', +$any($event.target).value)">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Max Participants</mat-label>
+        <input matInput type="number" [value]="draft.max_participants" (change)="updateDraft('max_participants', +$any($event.target).value)">
+      </mat-form-field>
+    </div>
+
+    <div class="edit-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Duration (mins)</mat-label>
+        <input matInput type="number" [value]="draft.suggested_duration_minutes" (change)="updateDraft('suggested_duration_minutes', +$any($event.target).value)">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Sort Order</mat-label>
+        <input matInput type="number" [value]="draft.sort_order" (change)="updateDraft('sort_order', +$any($event.target).value)">
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Time Label</mat-label>
+      <input matInput [value]="draft.suggested_time_label" (input)="updateDraft('suggested_time_label', $any($event.target).value)">
+    </mat-form-field>
+
+    <div class="edit-section-label">XP</div>
+
+    <div class="edit-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Host XP</mat-label>
+        <input matInput type="number" [value]="draft.host_create_xp" (change)="updateDraft('host_create_xp', +$any($event.target).value)">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Attendance XP</mat-label>
+        <input matInput type="number" [value]="draft.attendance_xp" (change)="updateDraft('attendance_xp', +$any($event.target).value)">
+      </mat-form-field>
+    </div>
+
+    <div class="edit-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Group Bonus XP</mat-label>
+        <input matInput type="number" [value]="draft.group_bonus_xp" (change)="updateDraft('group_bonus_xp', +$any($event.target).value)">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Solo XP</mat-label>
+        <input matInput type="number" [value]="draft.solo_xp" (change)="updateDraft('solo_xp', +$any($event.target).value)">
+      </mat-form-field>
+    </div>
+
+    <div class="edit-section-label">Badge</div>
+
+    <div class="edit-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Badge Name</mat-label>
+        <input matInput [value]="draft.badge_name || ''" (input)="updateDraft('badge_name', $any($event.target).value || null)">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Badge Icon</mat-label>
+        <input matInput [value]="draft.badge_icon || ''" (input)="updateDraft('badge_icon', $any($event.target).value || null)">
+      </mat-form-field>
+    </div>
+
+    <div class="edit-toggle-row">
+      <mat-slide-toggle [checked]="draft.is_active" (change)="updateDraft('is_active', $event.checked)" color="primary">
+        Active
+      </mat-slide-toggle>
+    </div>
+
+  </div>
+
+  <div class="edit-panel-footer">
+    <button mat-stroked-button (click)="closeEdit()">Cancel</button>
+    <button mat-flat-button color="primary" (click)="saveEdit()" [disabled]="saving()">
+      <mat-icon *ngIf="!saving()">save</mat-icon>
+      <mat-progress-spinner *ngIf="saving()" diameter="18" mode="indeterminate"></mat-progress-spinner>
+      {{ saving() ? 'Saving…' : 'Save Changes' }}
+    </button>
   </div>
 </div>
