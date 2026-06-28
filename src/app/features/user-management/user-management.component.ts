@@ -112,7 +112,7 @@ export class UserManagementComponent implements OnInit {
     { value: 'test', label: 'Test Topic' }
   ];
 
-  displayedColumns = ['select', 'name', 'status', 'trustScore', 'role', 'actions'];
+  displayedColumns = ['select', 'name', 'status', 'trustScore', 'role', 'lastActive', 'actions'];
 
   // Computed properties
   filteredUsers = computed(() => {
@@ -607,5 +607,31 @@ export class UserManagementComponent implements OnInit {
     if (score >= 80) return 'primary';
     if (score >= 60) return 'accent';
     return 'warn';
+  }
+
+  getLastActivePeriod(lastActiveAt?: string): string {
+    if (!lastActiveAt) return 'never';
+    const now = new Date();
+    const last = new Date(lastActiveAt);
+    const diffMs = now.getTime() - last.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    if (diffDays < 1) return 'today';
+    if (diffDays < 2) return 'yesterday';
+    if (diffDays < 7) return 'this-week';
+    if (diffDays < 31) return 'this-month';
+    return 'older';
+  }
+
+  getLastActiveLabel(lastActiveAt?: string): string {
+    if (!lastActiveAt) return 'Never';
+    const now = new Date();
+    const last = new Date(lastActiveAt);
+    const diffMs = now.getTime() - last.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    if (diffDays < 1) return 'Today';
+    if (diffDays < 2) return 'Yesterday';
+    if (diffDays < 7) return 'This week';
+    if (diffDays < 31) return 'This month';
+    return 'Older';
   }
 }

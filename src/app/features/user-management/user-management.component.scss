@@ -162,6 +162,10 @@
     width: 100px;
   }
 
+  .mat-column-lastActive {
+    width: 120px;
+  }
+
   .mat-column-actions {
     width: 48px;
     max-width: 48px;
@@ -274,6 +278,41 @@
     font-weight: 500;
     min-width: 18px;
     color: #555;
+  }
+}
+
+// Last active badge
+.last-active-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+
+  &.today {
+    background: #dcfce7;
+    color: #15803d;
+  }
+  &.yesterday {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+  &.this-week {
+    background: #fef9c3;
+    color: #a16207;
+  }
+  &.this-month {
+    background: #fef3c7;
+    color: #b45309;
+  }
+  &.older {
+    background: #f3f4f6;
+    color: #6b7280;
+  }
+  &.never {
+    background: #f3f4f6;
+    color: #9ca3af;
   }
 }
 
@@ -439,10 +478,9 @@
 
   .mat-mdc-table-sticky-border-elem-right,
   .users-table {
-    .mat-column-trustScore {
-      display: none;
-    }
-    .mat-column-role {
+    .mat-column-trustScore,
+    .mat-column-role,
+    .mat-column-lastActive {
       display: none;
     }
   }

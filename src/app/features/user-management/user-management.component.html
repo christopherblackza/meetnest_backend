@@ -162,6 +162,16 @@
           </td>
         </ng-container>
 
+        <!-- Last Active Column -->
+        <ng-container matColumnDef="lastActive">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="last_active_at">Last Active</th>
+          <td mat-cell *matCellDef="let user">
+            <span class="last-active-badge" [ngClass]="getLastActivePeriod(user.last_active_at)">
+              {{getLastActiveLabel(user.last_active_at)}}
+            </span>
+          </td>
+        </ng-container>
+
         <!-- Actions Column -->
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef></th>
